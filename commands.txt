@@ -1,0 +1,14 @@
+# Apply schema to local database
+npx wrangler d1 execute aurachat-db --file ./schema.sql --local
+
+# Apply schema to remote database
+npx wrangler d1 execute aurachat-db --file ./schema.sql --remote
+
+# Start local development server
+npx wrangler dev --assets ./public
+
+# Deploy AuraChat
+npx wrangler deploy --assets ./public
+
+# Generate JWT SECRET
+node -e "console.log(require('crypto').randomBytes(64).toString('base64'))"

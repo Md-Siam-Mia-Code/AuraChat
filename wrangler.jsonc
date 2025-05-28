@@ -1,0 +1,28 @@
+// wrangler.jsonc
+{
+	"name": "aurachat",
+	"main": "src/index.js",
+	"compatibility_date": "2024-05-15",
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "aurachat-db",
+			"database_id": "YOUR_NEW_DATABASE_ID_HERE"
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "aurachat-kv",
+			"id": "YOUR_NEW_KV_NAMESPACE_ID_HERE"
+		}
+	],
+	"observability": {
+		"logs": {
+			"enabled": true
+		}
+	},
+	"assets": {
+		"directory": "./public/",
+		"binding": "ASSETS"
+	}
+}
