@@ -1,5 +1,5 @@
 <p align="center">
-<img src="assets/Banner.png" alt="Aura Chat Banner" width="600">
+<img src="assets/Banner.png" alt="Aura Chat Banner">
   <h1 align="center">✨ Aura Chat 🔮</h1>
 </p>
 
