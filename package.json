@@ -1,22 +1,23 @@
-
 {
 	"name": "connected",
 	"version": "0.0.0",
 	"private": true,
+	"type": "module",
 	"scripts": {
-	  "deploy": "wrangler deploy",
-	  "dev": "wrangler dev --local --persist",
-	  "test": "vitest",
-	  "test:coverage": "vitest run --coverage"
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev --local --persist",
+		"test": "vitest",
+		"test:coverage": "vitest run --coverage"
 	},
 	"devDependencies": {
-	  "@cloudflare/vitest-pool-workers": "^0.8.61",
-	  "@cloudflare/workers-types": "^4.20250810.0",
-	  "prettier": "^3.6.2",
-	  "vitest": "3.2.4",
-	  "wrangler": "^4.28.1"
+		"@cloudflare/vitest-pool-workers": "^0.8.61",
+		"@cloudflare/workers-types": "^4.20250810.0",
+		"prettier": "^3.6.2",
+		"vitest": "3.2.4",
+		"wrangler": "^4.28.1"
 	},
 	"dependencies": {
-	  "jose": "^6.0.12"
+		"@cloudflare/kv-asset-handler": "^0.4.0",
+		"jose": "^6.0.12"
 	}
-   }
+}
