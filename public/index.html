@@ -5,7 +5,7 @@
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<title>Aura Chat</title>
-
+	<link rel="icon" href="/favicon.ico" type="image/x-icon">
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
@@ -18,131 +18,91 @@
 
 <body>
 	<div class="app-container">
-		<div id="loading-screen" class="loading-overlay" style="display: flex;">
+		<div id="loading-screen" class="loading-overlay">
 			<div class="loading-box">
 				<i class="fas fa-circle-notch fa-spin loading-icon"></i>
 				<p>Initializing Aura Chat...</p>
 			</div>
 		</div>
 
-		<div id="onboarding-screen" class="modal-view glass-panel" style="display: none;">
+		<section id="onboarding-screen" class="modal-view glass-panel" style="display: none;">
 			<div class="modal-content-wrapper">
 				<i class="modal-icon fa-solid fa-user-shield" aria-hidden="true"></i>
 				<h2 class="gradient-text">Admin Account Setup</h2>
 				<p class="modal-instructions">Create the primary administrator account to launch Aura Chat.</p>
-				<div id="onboarding-error" class="error modal-error" role="alert"></div>
+				<div id="onboarding-error" class="error modal-error" role="alert" aria-live="polite"></div>
 				<form id="onboarding-form" class="auth-form" novalidate>
-					<div class="custom-form-group">
-						<span id="onboarding-username-label" class="custom-label">Admin Username</span>
-						<div class="custom-input-wrapper">
-							<div class="custom-input" contenteditable="true" data-placeholder="Min. 3 characters"
-								id="onboarding-username-proxy" role="textbox"
-								aria-labelledby="onboarding-username-label"
-								data-target-input="onboarding-username"></div>
-						</div>
-						<input type="text" id="onboarding-username" name="username" class="hidden-actual-input"
-							required minlength="3" />
+					<div class="form-group">
+						<label for="onboarding-username">Admin Username</label>
+						<input type="text" id="onboarding-username" name="username"
+							placeholder="Min. 3 characters" required minlength="3" />
 					</div>
-					<div class="custom-form-group">
-						<span id="onboarding-password-label" class="custom-label">Admin Password</span>
-						<div class="custom-input-wrapper">
-							<div class="custom-input" contenteditable="true" data-placeholder="Min. 8 characters"
-								id="onboarding-password-proxy" role="textbox"
-								aria-labelledby="onboarding-password-label"
-								data-target-input="onboarding-password" data-is-password></div>
-						</div>
+					<div class="form-group">
+						<label for="onboarding-password">Admin Password</label>
 						<input type="password" id="onboarding-password" name="password"
-							class="hidden-actual-input" required minlength="8" />
+							placeholder="Min. 8 characters" required minlength="8" />
 					</div>
-					<div class="custom-form-group">
-						<span id="onboarding-master-password-label" class="custom-label">Master Password</span>
-						<div class="custom-input-wrapper">
-							<div class="custom-input" contenteditable="true"
-								data-placeholder="Min. 10 characters" id="onboarding-master-password-proxy"
-								role="textbox" aria-labelledby="onboarding-master-password-label"
-								data-target-input="onboarding-master-password" data-is-password></div>
-						</div>
+					<div class="form-group">
+						<label for="onboarding-master-password">Master Password</label>
 						<input type="password" id="onboarding-master-password" name="masterPassword"
-							class="hidden-actual-input" required minlength="10"
+							placeholder="Min. 10 characters" required minlength="10"
 							aria-describedby="master-password-desc" />
-						<p id="master-password-desc" class="form-hint">This password grants access to the admin
-							dashboard. Keep it secure.</p>
+						<p id="master-password-desc" class="form-hint">This grants access to the admin dashboard.
+							Keep it secure.</p>
 					</div>
-					<div role="button" tabindex="0" id="onboarding-submit"
-						class="custom-button button-primary button-full">
-						<span class="button-text">Create Admin & Launch</span><i
-							class="fa-solid fa-spinner fa-spin button-spinner" style="display: none;"></i>
-					</div>
+					<button type="submit" id="onboarding-submit" class="custom-button button-primary button-full">
+						<span class="button-text">Create Admin & Launch</span>
+						<i class="fa-solid fa-spinner fa-spin button-spinner" style="display: none;"></i>
+					</button>
 				</form>
 			</div>
-		</div>
+		</section>
 
-		<div id="login-screen" class="modal-view glass-panel" style="display: none;">
+		<section id="login-screen" class="modal-view glass-panel" style="display: none;">
 			<div class="modal-content-wrapper">
 				<div class="modal-header">
 					<i class="modal-icon fa-solid fa-meteor" aria-hidden="true"></i>
 					<h2 class="gradient-text">Welcome to Aura Chat</h2>
 					<p class="modal-instructions">Connect and Converse Securely.</p>
 				</div>
-				<div id="login-error" class="error modal-error" role="alert"></div>
+				<div id="login-error" class="error modal-error" role="alert" aria-live="polite"></div>
 				<div class="tabs">
-					<button id="user-login-tab" class="tab-button" data-target="user-login-form"><i
-							class="fa-solid fa-user-astronaut"></i> User Login</button>
-					<button id="admin-login-tab" class="tab-button active" data-target="admin-login-form"><i
-							class="fa-solid fa-user-shield"></i> Admin Access</button>
+					<button id="user-login-tab" class="tab-button"><i class="fa-solid fa-user-astronaut"></i> User
+						Login</button>
+					<button id="admin-login-tab" class="tab-button active"><i class="fa-solid fa-user-shield"></i>
+						Admin Access</button>
 				</div>
 
 				<form id="user-login-form" class="login-form-panel auth-form" novalidate style="display: none;">
-					<div class="custom-form-group">
-						<span id="login-username-label" class="custom-label">Username</span>
-						<div class="custom-input-wrapper">
-							<div class="custom-input" contenteditable="true"
-								data-placeholder="Enter your username" id="login-username-proxy" role="textbox"
-								aria-labelledby="login-username-label" data-target-input="login-username"></div>
-						</div>
-						<input type="text" id="login-username" name="username" class="hidden-actual-input"
+					<div class="form-group">
+						<label for="login-username">Username</label>
+						<input type="text" id="login-username" name="username" placeholder="Enter your username"
 							required />
 					</div>
-					<div class="custom-form-group">
-						<span id="login-password-label" class="custom-label">Password</span>
-						<div class="custom-input-wrapper">
-							<div class="custom-input" contenteditable="true"
-								data-placeholder="Enter your password" id="login-password-proxy" role="textbox"
-								aria-labelledby="login-password-label" data-target-input="login-password"
-								data-is-password></div>
-						</div>
-						<input type="password" id="login-password" name="password" class="hidden-actual-input"
-							required />
+					<div class="form-group">
+						<label for="login-password">Password</label>
+						<input type="password" id="login-password" name="password"
+							placeholder="Enter your password" required />
 					</div>
-					<div role="button" tabindex="0" id="login-submit"
-						class="custom-button button-primary button-full">
+					<button type="submit" id="login-submit" class="custom-button button-primary button-full">
 						<i class="fa-solid fa-right-to-bracket button-icon"></i>
 						<span class="button-text">Sign In</span>
 						<i class="fa-solid fa-spinner fa-spin button-spinner" style="display: none;"></i>
-					</div>
+					</button>
 					<p class="form-switch-text">Need an account? Please contact your administrator.</p>
 				</form>
 
-				<form id="admin-login-form" class="login-form-panel active-panel auth-form" novalidate
-					style="display: flex;">
-					<div class="custom-form-group">
-						<span id="admin-master-password-label" class="custom-label">Master Password</span>
-						<div class="custom-input-wrapper">
-							<div class="custom-input" contenteditable="true"
-								data-placeholder="Enter master password" id="admin-master-password-proxy"
-								role="textbox" aria-labelledby="admin-master-password-label"
-								data-target-input="admin-master-password" data-is-password></div>
-						</div>
+				<form id="admin-login-form" class="login-form-panel auth-form active-panel" novalidate>
+					<div class="form-group">
+						<label for="admin-master-password">Master Password</label>
 						<input type="password" id="admin-master-password" name="masterPassword"
-							class="hidden-actual-input" required />
+							placeholder="Enter master password" required />
 					</div>
-					<div role="button" tabindex="0" id="admin-login-submit"
-						class="custom-button button-primary button-full">
-						<i class="fa-solid fa-shield-alt button-icon"></i>
-						<!-- Changed from fa-shield-keyhole for broader compatibility, or ensure keyhole is in your FA version -->
+					<button type="submit" id="admin-login-submit" class="custom-button button-primary button-full">
+						<i class="fa-solid fa-shield-halved button-icon"></i>
 						<span class="button-text">Access Dashboard</span>
 						<i class="fa-solid fa-spinner fa-spin button-spinner" style="display: none;"></i>
-					</div>
+					</button>
 					<p class="form-switch-text">
 						<button type="button" class="link-button switch-to-user-login">
 							<i class="fa-solid fa-arrow-left"></i> Back to User Login
@@ -150,131 +110,109 @@
 					</p>
 				</form>
 			</div>
-		</div>
+		</section>
 
 		<div id="chat-app" class="chat-layout glass-panel" style="display: none;">
 			<aside class="left-panel">
 				<header class="panel-header">
 					<div class="user-profile-summary">
-						<div class="avatar avatar-small offline" id="my-avatar-summary"><i
+						<div class="avatar avatar-small" id="my-avatar-summary"><i
 								class="fa-solid fa-user-astronaut"></i></div>
 						<span id="my-username-summary" class="user-name-display">Username</span>
 					</div>
 					<div class="panel-actions">
-						<div role="button" tabindex="0" class="custom-button icon-button"
-							id="manage-blocks-button" title="Manage Blocked Users"><i
-								class="fa-solid fa-user-slash button-icon"></i></div>
-						<div role="button" tabindex="0" class="custom-button icon-button" id="theme-toggle-button"
-							title="Toggle Theme"><i class="fa-solid fa-sun button-icon"></i></div>
-						<div role="button" tabindex="0" class="custom-button icon-button" id="logout-button"
-							title="Logout"><i class="fa-solid fa-right-from-bracket button-icon"></i></div>
+						<button type="button" class="custom-button icon-button" id="manage-blocks-button"
+							title="Manage Blocked Users"><i
+								class="fa-solid fa-user-slash button-icon"></i></button>
+						<button type="button" class="custom-button icon-button" id="theme-toggle-button"
+							title="Toggle Theme"><i class="fa-solid fa-sun button-icon"></i></button>
+						<button type="button" class="custom-button icon-button" id="logout-button"
+							title="Logout"><i class="fa-solid fa-right-from-bracket button-icon"></i></button>
 					</div>
 				</header>
 				<div class="search-bar-container">
 					<div class="search-bar">
-						<div class="custom-input-wrapper">
-							<i class="fa-solid fa-magnifying-glass search-icon"></i>
-							<div class="custom-input" contenteditable="true"
-								data-placeholder="Search chats or users..." id="conversation-search-proxy"
-								role="searchbox" data-target-input="conversation-search"></div>
-						</div>
-						<input type="search" id="conversation-search" class="hidden-actual-input" />
+						<i class="fa-solid fa-magnifying-glass search-icon"></i>
+						<input type="search" id="conversation-search" placeholder="Search chats or users..." />
 					</div>
 				</div>
 				<nav class="conversation-list" id="conversation-list-area">
-					<div class="list-placeholder" id="conversation-list-placeholder"><i
-							class="fa-solid fa-spinner fa-spin"></i> Loading chats...</div>
+					<div class="list-placeholder"><i class="fa-solid fa-spinner fa-spin"></i> Loading chats...
+					</div>
 				</nav>
 			</aside>
 
 			<main class="right-panel">
-				<div id="chat-view-placeholder" class="chat-view-placeholder" style="display:flex;">
-					<div role="button" tabindex="0"
-						class="custom-button icon-button mobile-placeholder-menu-button"
+				<div id="chat-view-placeholder" class="chat-view-placeholder">
+					<button type="button" class="custom-button icon-button mobile-placeholder-menu-button"
 						id="mobile-placeholder-menu-toggle" title="Toggle Menu"><i
-							class="fa-solid fa-bars button-icon"></i></div>
+							class="fa-solid fa-bars button-icon"></i></button>
 					<i class="fa-regular fa-comments placeholder-icon"></i>
 					<p>Select a conversation to start chatting</p>
-					<p style="font-size: 0.8em; opacity: 0.6; margin-top:10px;">or find a user in the list.</p>
 				</div>
 
 				<div id="chat-view-content" style="display: none;">
-					<!-- Removed .chat-view-inner-content class as it's not defined in CSS, id is used -->
 					<header class="chat-header" id="chat-view-header">
-						<div role="button" tabindex="0" class="custom-button icon-button mobile-menu-button"
+						<button type="button" class="custom-button icon-button mobile-menu-button"
 							id="mobile-menu-toggle" title="Toggle Menu"><i
-								class="fa-solid fa-bars button-icon"></i></div>
+								class="fa-solid fa-bars button-icon"></i></button>
 						<div class="contact-info">
-							<div class="avatar offline" id="chat-partner-avatar" data-user-id=""><i
-									class="fa-solid fa-user"></i></div>
+							<div class="avatar" id="chat-partner-avatar"><i class="fa-solid fa-user"></i></div>
 							<div class="contact-details">
-								<span class="contact-name" id="chat-partner-name">Select Chat</span>
+								<span class="contact-name" id="chat-partner-name"></span>
 								<div class="status-and-typing">
-									<span class="contact-status offline" id="chat-partner-status">
-										<span id="chat-partner-status-text">Offline</span>
-									</span>
+									<span class="contact-status" id="chat-partner-status"><span
+											id="chat-partner-status-text"></span></span>
 									<span class="typing-indicator" id="chat-typing-indicator"
 										style="display: none;">typing...</span>
 								</div>
 							</div>
 						</div>
 						<div class="header-actions">
-							<div role="button" tabindex="0" class="custom-button icon-button"
-								id="block-user-button" title="Block User" style="display: none;"><i
-									class="fa-solid fa-user-lock button-icon"></i></div>
-							<div role="button" tabindex="0" class="custom-button icon-button"
-								id="refresh-messages-button" title="Refresh Messages" style="display: none;">
+							<button type="button" class="custom-button icon-button" id="block-user-button"
+								data-action="block-user" title="Block User" style="display: none;"><i
+									class="fa-solid fa-user-lock button-icon"></i></button>
+							<button type="button" class="custom-button icon-button" id="refresh-messages-button"
+								title="Refresh Messages" style="display: none;">
 								<i class="fa-solid fa-rotate-right button-icon"></i>
 								<i class="fa-solid fa-spinner fa-spin button-spinner"
 									style="display: none;"></i>
-							</div>
+							</button>
 						</div>
 					</header>
 					<div class="chat-messages" id="message-area">
-						<button id="manual-load-older-button" class="custom-button"
-							style="display: none; margin: 10px auto; z-index: 5;">
-							<i class="fa-solid fa-rotate-left button-icon"></i>
-							<span class="button-text">Load Older Messages</span>
-							<i class="fa-solid fa-spinner fa-spin button-spinner" style="display: none;"></i>
-						</button>
-						<div id="older-messages-loader" class="older-messages-loader" style="display: none;">
-							<i class="fa-solid fa-spinner fa-spin"></i> Loading older messages...
-						</div>
+						<button type="button" id="manual-load-older-button" class="custom-button"
+							style="display: none;"><i class="fa-solid fa-rotate-left button-icon"></i><span
+								class="button-text">Load Older</span><i
+								class="fa-solid fa-spinner fa-spin button-spinner"
+								style="display: none;"></i></button>
+						<div id="older-messages-loader" class="older-messages-loader" style="display: none;"><i
+								class="fa-solid fa-spinner fa-spin"></i></div>
 					</div>
 					<footer class="chat-input-area">
 						<div id="reply-context-area" class="reply-context" style="display: none;">
 							<div class="reply-context-content">
 								<span class="reply-context-header">Replying to <span
-										id="reply-context-user">User</span></span>
-								<p id="reply-context-text">Message snippet...</p>
+										id="reply-context-user"></span></span>
+								<p id="reply-context-text"></p>
 							</div>
-							<div role="button" tabindex="0" id="cancel-reply-button"
+							<button type="button" id="cancel-reply-button"
 								class="custom-button icon-button cancel-reply-button" title="Cancel Reply"><i
-									class="fa-solid fa-xmark button-icon"></i></div>
+									class="fa-solid fa-xmark button-icon"></i></button>
 						</div>
 						<div id="emoji-panel" style="display: none;">
 							<div class="emoji-grid"></div>
 						</div>
-						<div class="chat-input-wrapper">
-							<div class="message-compose">
-								<div role="button" tabindex="0" class="custom-button icon-button"
-									id="emoji-toggle-button" title="Emoji">
-									<i class="fa-regular fa-face-smile button-icon"></i>
-								</div>
-								<div class="custom-input-wrapper">
-									<div id="message-input-proxy" class="custom-textarea"
-										contenteditable="true" data-placeholder="Send an aura wave..."
-										role="textbox" aria-multiline="true"
-										data-target-input="message-input"></div>
-								</div>
-								<textarea id="message-input" class="hidden-actual-input" rows="1"></textarea>
-								<div role="button" tabindex="0" class="custom-button send-button"
-									id="send-button" title="Send Message">
-									<i class="fa-solid fa-paper-plane button-icon"></i>
-									<i class="fa-solid fa-spinner fa-spin button-spinner"
-										style="display: none;"></i>
-								</div>
-							</div>
+						<div class="message-compose">
+							<button type="button" class="custom-button icon-button" id="emoji-toggle-button"
+								title="Emoji"><i class="fa-regular fa-face-smile button-icon"></i></button>
+							<textarea id="message-input" placeholder="Send an aura wave..." rows="1"></textarea>
+							<button type="button" class="custom-button send-button" id="send-button"
+								title="Send Message">
+								<i class="fa-solid fa-paper-plane button-icon"></i>
+								<i class="fa-solid fa-spinner fa-spin button-spinner"
+									style="display: none;"></i>
+							</button>
 						</div>
 					</footer>
 				</div>
@@ -287,11 +225,10 @@
 				<h1><i class="fa-solid fa-solar-panel"></i> Admin Aura Panel</h1>
 				<div class="header-actions">
 					<span id="admin-username-display" class="user-name-display">Admin</span>
-					<div role="button" tabindex="0" class="custom-button icon-button"
-						id="admin-theme-toggle-button" title="Toggle Theme"><i
-							class="fa-solid fa-sun button-icon"></i></div>
-					<div role="button" tabindex="0" class="custom-button icon-button" id="admin-logout-button"
-						title="Logout Admin"><i class="fa-solid fa-right-from-bracket button-icon"></i></div>
+					<button type="button" class="custom-button icon-button" id="admin-theme-toggle-button"
+						title="Toggle Theme"><i class="fa-solid fa-sun button-icon"></i></button>
+					<button type="button" class="custom-button icon-button" id="admin-logout-button"
+						title="Logout Admin"><i class="fa-solid fa-right-from-bracket button-icon"></i></button>
 				</div>
 			</header>
 			<main class="admin-content">
@@ -307,48 +244,37 @@
 								class="stat-value" id="stat-total-conversations">--</span><span
 								class="stat-label">Conversations</span></div>
 						<div class="stat-card"><i class="fa-solid fa-wifi stat-icon"></i><span class="stat-value"
-								id="stat-active-users">--</span><span class="stat-label">Active Users Now</span>
+								id="stat-active-users">--</span><span class="stat-label">Active Users</span>
 						</div>
 					</div>
 				</section>
 				<section class="admin-section glass-panel-inner" id="admin-user-management">
 					<h2 class="gradient-text"><i class="fa-solid fa-users-gear"></i> User Management</h2>
-					<div id="admin-user-error" class="error modal-error"></div>
+					<div id="admin-user-error" class="error modal-error" aria-live="polite"></div>
 					<div class="admin-actions-container">
 						<form id="admin-add-user-form" class="admin-form">
 							<h3><i class="fa-solid fa-user-plus"></i> Add New User</h3>
-							<div class="custom-form-group">
-								<span id="admin-add-username-label" class="custom-label">Username</span>
-								<div class="custom-input-wrapper">
-									<div class="custom-input" contenteditable="true"
-										data-placeholder="Min. 3 characters" id="admin-add-username-proxy"
-										role="textbox" aria-labelledby="admin-add-username-label"
-										data-target-input="admin-add-username"></div>
-								</div>
-								<input type="text" id="admin-add-username" class="hidden-actual-input" required
-									minlength="3" />
+							<div class="form-group">
+								<label for="admin-add-username">Username</label>
+								<input type="text" id="admin-add-username" name="username"
+									placeholder="Min. 3 characters" required minlength="3" />
 							</div>
-							<div class="custom-form-group">
-								<span id="admin-add-password-label" class="custom-label">Password</span>
-								<div class="custom-input-wrapper">
-									<div class="custom-input" contenteditable="true"
-										data-placeholder="Min. 8 characters" id="admin-add-password-proxy"
-										role="textbox" aria-labelledby="admin-add-password-label"
-										data-target-input="admin-add-password" data-is-password></div>
-								</div>
-								<input type="password" id="admin-add-password" class="hidden-actual-input"
-									required minlength="8" />
+							<div class="form-group">
+								<label for="admin-add-password">Password</label>
+								<input type="password" id="admin-add-password" name="password"
+									placeholder="Min. 8 characters" required minlength="8" />
 							</div>
-							<div role="button" tabindex="0" id="admin-add-user-button"
-								class="custom-button button-primary button-full"><span
-									class="button-text">Create User</span><i
-									class="fa-solid fa-spinner fa-spin button-spinner"
-									style="display: none;"></i></div>
+							<button type="submit" id="admin-add-user-button"
+								class="custom-button button-primary button-full">
+								<span class="button-text">Create User</span>
+								<i class="fa-solid fa-spinner fa-spin button-spinner"
+									style="display: none;"></i>
+							</button>
 						</form>
 						<div class="admin-user-list-container">
 							<h3><i class="fa-solid fa-address-book"></i> User Accounts</h3>
 							<div class="table-container">
-								<table id="admin-user-list-table">
+								<table>
 									<thead>
 										<tr>
 											<th>ID</th>
@@ -357,13 +283,7 @@
 											<th>Actions</th>
 										</tr>
 									</thead>
-									<tbody id="admin-user-list-body">
-										<tr>
-											<td colspan="4" class="list-placeholder"><i
-													class="fa-solid fa-spinner fa-spin"></i> Loading
-												users...</td>
-										</tr>
-									</tbody>
+									<tbody id="admin-user-list-body"></tbody>
 								</table>
 							</div>
 						</div>
@@ -374,44 +294,35 @@
 
 		<div id="manage-blocks-modal" class="modal-view glass-panel modal-list-container" style="display: none;">
 			<div class="modal-content-wrapper">
-				<div role="button" tabindex="0" class="custom-button icon-button modal-close-button"
-					aria-label="Close blocked users modal"><i class="fa-solid fa-xmark button-icon"></i></div>
+				<button type="button" class="custom-button icon-button modal-close-button"
+					aria-label="Close blocked users modal"><i class="fa-solid fa-xmark button-icon"></i></button>
 				<i class="modal-icon fa-solid fa-user-lock"></i>
 				<h2 class="gradient-text">Blocked Users</h2>
-				<div id="manage-blocks-error" class="error modal-error"></div>
-				<div id="blocked-users-list" class="blocked-list">
-					<p class="list-placeholder" id="blocked-list-placeholder"><i
-							class="fa-solid fa-spinner fa-spin"></i> Loading...</p>
-				</div>
-				<p class="modal-instructions" style="margin-top: 15px; font-size:0.9em;">Users you block cannot send
-					you messages or see your online status.</p>
+				<div id="manage-blocks-error" class="error modal-error" aria-live="polite"></div>
+				<div id="blocked-users-list" class="blocked-list"></div>
 			</div>
 		</div>
 
 		<div id="confirmation-modal-overlay" class="confirmation-modal-overlay" style="display: none;" role="dialog"
 			aria-modal="true" aria-labelledby="confirmation-message">
-			<div id="confirmation-modal" class="confirmation-modal-box glass-panel">
+			<div class="confirmation-modal-box glass-panel">
 				<p id="confirmation-message" class="confirmation-prompt">Are you sure?</p>
 				<div class="confirmation-buttons">
-					<div role="button" tabindex="0" id="confirm-yes-button" class="custom-button button-confirm">
-						Yes</div>
-					<div role="button" tabindex="0" id="confirm-no-button" class="custom-button button-cancel">No
-					</div>
+					<button type="button" id="confirm-yes-button" class="custom-button button-confirm">Yes</button>
+					<button type="button" id="confirm-no-button" class="custom-button button-cancel">No</button>
 				</div>
 			</div>
 		</div>
 
 		<div id="error-banner" class="error-banner" role="alert" style="display: none;">
 			<i class="fa-solid fa-triangle-exclamation error-icon"></i>
-			<span id="error-banner-message">Error placeholder</span>
+			<span id="error-banner-message"></span>
 			<button id="error-banner-close" class="error-banner-close" aria-label="Close error message"><i
 					class="fa-solid fa-xmark"></i></button>
 		</div>
-
-		<div class="sr-only" aria-hidden="true">End of Aura Chat application content.</div>
 	</div>
 
-	<script src="./script.js"></script>
+	<script type="module" src="./js/main.js"></script>
 </body>
 
 </html>
