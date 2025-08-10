@@ -1,3 +1,5 @@
+// src/auth.js
+
 import { sha256 } from "./utils.js";
 import { getAppConfig } from "./db.js";
 import * as jose from "jose";
@@ -40,7 +42,6 @@ export async function generateJwtToken(env, userId, username, isAdmin) {
   }
 }
 
-// NEW EXPORT for WS verification
 export async function verifyJwtToken(token, env) {
   if (!token) return null;
   try {
@@ -71,21 +72,6 @@ export async function verifyJwtToken(token, env) {
       console.info(
         `JWT verification failed for user ${subject}: Token expired.`
       );
-    } else if (error instanceof jose.errors.JWSSignatureVerificationFailed) {
-      console.warn(
-        `JWT verification failed for user ${subject}: Invalid signature.`
-      );
-    } else if (
-      error instanceof jose.errors.JWSInvalid ||
-      error instanceof jose.errors.JWTInvalid
-    ) {
-      console.warn(
-        `JWT verification failed for user ${subject}: Invalid token format/claims.`
-      );
-    } else if (error instanceof jose.errors.JWTClaimValidationFailed) {
-      console.warn(
-        `JWT verification failed: Claim validation failed (${error.claim} = ${error.reason}).`
-      );
     } else {
       console.error(
         `Unexpected JWT verification error for user ${subject}:`,
@@ -100,16 +86,11 @@ async function verifyJwtFromRequest(request, env) {
   const authHeader = request.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) return null;
   const token = authHeader.substring(7);
-  return verifyJwtToken(token, env); // Use the exported function
+  return verifyJwtToken(token, env);
 }
 
 async function updateUserLastActive(env, userId) {
-  if (!userId || !env?.DB) {
-    console.warn(
-      `updateUserLastActive skipped: Missing userId (${userId}) or DB.`
-    );
-    return;
-  }
+  if (!userId || !env?.DB) return;
   try {
     await env.DB.prepare("UPDATE users SET last_active_ts = ?1 WHERE id = ?2")
       .bind(new Date().toISOString(), userId)
@@ -123,23 +104,19 @@ async function updateUserLastActive(env, userId) {
 }
 
 async function verifyUserExists(env, userId, isAdminExpected) {
-  if (!env?.DB) {
-    throw new Error("Database unavailable for user verification.");
-  }
+  if (!env?.DB) throw new Error("Database unavailable for user verification.");
   try {
     const userCheck = await env.DB.prepare(
       "SELECT is_admin FROM users WHERE id = ?1"
     )
       .bind(userId)
       .first("is_admin");
-
     if (userCheck === null) {
       console.warn(
         `Auth rejection: User ${userId} from token not found in DB.`
       );
       return false;
     }
-    // Ensure boolean comparison for isAdminExpected (0/1 vs false/true)
     if (!!userCheck !== !!isAdminExpected) {
       console.warn(
         `Auth rejection: User ${userId} admin status mismatch (Expected: ${isAdminExpected}, Found: ${userCheck}).`
@@ -164,9 +141,6 @@ export async function requireAuth(request, env, ctx, handler) {
     throw error;
   }
   if (authPayload.isAdmin) {
-    console.warn(
-      `Auth rejection: Admin user ${authPayload.userId} accessing user route.`
-    );
     const error = new Error("Forbidden: Endpoint requires non-admin user.");
     error.status = 403;
     throw error;
@@ -189,9 +163,6 @@ export async function requireAdminAuth(request, env, ctx, handler) {
     throw error;
   }
   if (!authPayload.isAdmin) {
-    console.warn(
-      `Auth rejection: Non-admin user ${authPayload.userId} accessing admin route.`
-    );
     const error = new Error("Forbidden: Admin access required.");
     error.status = 403;
     throw error;
@@ -211,18 +182,10 @@ export async function requireAdminAuth(request, env, ctx, handler) {
 export async function verifyMasterPassword(db, providedPassword) {
   if (!providedPassword) return false;
   const storedHash = await getAppConfig(db, "master_password_hash");
-  if (!storedHash || storedHash === "") {
-    console.error("CRITICAL: Master password hash missing/empty.");
+  if (!storedHash) {
+    console.error("CRITICAL: Master password hash missing.");
     return false;
   }
-  try {
-    const providedHash = await sha256(providedPassword);
-    return providedHash === storedHash;
-  } catch (hashError) {
-    console.error(
-      "Error hashing master password during verification:",
-      hashError
-    );
-    return false;
-  }
+  const providedHash = await sha256(providedPassword);
+  return providedHash === storedHash;
 }
