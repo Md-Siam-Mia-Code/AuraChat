@@ -3,3 +3,9 @@ package-lock.json
 node_modules/
 
 .wrangler
+
+*.txt
+
+.env
+
+.dev.vars
