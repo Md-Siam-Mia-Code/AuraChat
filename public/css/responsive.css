@@ -1,0 +1,118 @@
+@media (max-width: 1024px) {
+     .admin-actions-container {
+          grid-template-columns: 1fr;
+          gap: 30px;
+     }
+
+     .left-panel {
+          width: 300px;
+     }
+
+     .chat-layout,
+     .admin-layout {
+          width: calc(100vw - 30px);
+          height: calc(100dvh - 30px);
+     }
+}
+
+@media (max-width: 768px) {
+     body {
+          overflow: auto;
+     }
+
+     .app-container {
+          padding: 0;
+     }
+
+     .chat-layout,
+     .admin-layout {
+          height: 100dvh;
+          width: 100vw;
+          max-width: 100%;
+          max-height: 100%;
+          border-radius: 0;
+          border: none;
+          box-shadow: none;
+          backdrop-filter: none;
+          background-image: linear-gradient(135deg, var(--grad-start) 0%, var(--grad-end) 100%);
+     }
+
+     .left-panel {
+          width: 85%;
+          max-width: 320px;
+          height: 100dvh;
+          position: fixed;
+          top: 0;
+          left: 0;
+          z-index: 99;
+          transform: translateX(-100%);
+          border-radius: 0;
+          border-right: 1px solid var(--glass-border);
+          padding: 15px;
+          backdrop-filter: blur(var(--blur-intensity));
+          background: var(--glass-bg);
+          box-shadow: 5px 0 25px var(--shadow);
+     }
+
+     body.left-panel-active .left-panel {
+          transform: translateX(0);
+     }
+
+     .chat-header,
+     .chat-input-area,
+     .admin-header {
+          background: var(--glass-bg);
+          backdrop-filter: blur(var(--blur-intensity));
+          padding-left: 15px;
+          padding-right: 15px;
+     }
+
+     .admin-header h1 {
+          font-size: 1.3rem;
+     }
+
+     .admin-content,
+     .admin-section {
+          padding: 15px;
+     }
+
+     .glass-panel-inner {
+          background: var(--glass-bg);
+          backdrop-filter: blur(var(--blur-intensity));
+          padding: 20px;
+          border: 1px solid var(--glass-border);
+     }
+
+     .mobile-placeholder-menu-button,
+     .mobile-menu-button {
+          display: inline-flex;
+     }
+}
+
+@media (max-width: 480px) {
+     html {
+          font-size: 15px;
+     }
+
+     :root {
+          --panel-padding: 15px;
+          --header-height: 60px;
+     }
+
+     .left-panel {
+          max-width: calc(100% - 50px);
+     }
+
+     .modal-content-wrapper {
+          padding: 30px 25px;
+     }
+
+     .form-group input,
+     .message-compose textarea {
+          min-height: 48px;
+     }
+
+     .message {
+          max-width: 85%;
+     }
+}
