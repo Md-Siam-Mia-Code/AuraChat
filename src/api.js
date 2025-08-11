@@ -1,5 +1,3 @@
-// src/api.js
-
 import { jsonResponse, sha256, validateInput } from "./utils.js";
 import { getAppConfig, isBlocked, getConversationParticipants } from "./db.js";
 import {
@@ -8,6 +6,23 @@ import {
   requireAdminAuth,
   verifyMasterPassword,
 } from "./auth.js";
+
+async function broadcastToUsers(userIds, message, env) {
+  if (!userIds || userIds.length === 0) return;
+  const stubs = userIds.map((id) => {
+    const durableId = env.USER_SESSIONS.idFromName(id.toString());
+    return env.USER_SESSIONS.get(durableId);
+  });
+
+  const broadcastUrl = "https://aurachat-internal/broadcast";
+  const promises = stubs.map((stub) =>
+    stub.fetch(broadcastUrl, {
+      method: "POST",
+      body: JSON.stringify(message),
+    })
+  );
+  await Promise.all(promises);
+}
 
 export async function handleApiRequest(request, env, ctx) {
   const url = new URL(request.url);
@@ -50,7 +65,6 @@ export async function handleApiRequest(request, env, ctx) {
           {},
           env
         );
-
       const validationError = validateInput(body, [
         "username",
         "password",
@@ -58,10 +72,8 @@ export async function handleApiRequest(request, env, ctx) {
       ]);
       if (validationError)
         return jsonResponse({ error: validationError }, 400, {}, env);
-
       const passwordHash = await sha256(body.password);
       const masterPasswordHash = await sha256(body.masterPassword);
-
       await env.DB.batch([
         env.DB.prepare(
           "INSERT INTO users (username, password_hash, is_admin, created_at) VALUES (?1, ?2, 1, ?3)"
@@ -73,7 +85,6 @@ export async function handleApiRequest(request, env, ctx) {
           "INSERT OR REPLACE INTO app_config (config_key, config_value) VALUES (?1, ?2)"
         ).bind("admin_created", "true"),
       ]);
-
       return jsonResponse({ success: true }, 201, {}, env);
     }
 
@@ -81,7 +92,6 @@ export async function handleApiRequest(request, env, ctx) {
       const validationError = validateInput(body, ["username", "password"]);
       if (validationError)
         return jsonResponse({ error: validationError }, 400, {}, env);
-
       const user = await env.DB.prepare(
         "SELECT id, username, password_hash, is_admin FROM users WHERE username = ?1 COLLATE NOCASE"
       )
@@ -89,11 +99,9 @@ export async function handleApiRequest(request, env, ctx) {
         .first();
       if (!user || user.is_admin)
         return jsonResponse({ error: "Invalid credentials." }, 401, {}, env);
-
       const passwordHash = await sha256(body.password);
       if (passwordHash !== user.password_hash)
         return jsonResponse({ error: "Invalid credentials." }, 401, {}, env);
-
       const token = await generateJwtToken(env, user.id, user.username, false);
       return jsonResponse(
         {
@@ -111,7 +119,6 @@ export async function handleApiRequest(request, env, ctx) {
       const validationError = validateInput(body, ["masterPassword"]);
       if (validationError)
         return jsonResponse({ error: validationError }, 400, {}, env);
-
       const isValid = await verifyMasterPassword(env.DB, body.masterPassword);
       if (!isValid)
         return jsonResponse(
@@ -120,7 +127,6 @@ export async function handleApiRequest(request, env, ctx) {
           {},
           env
         );
-
       const adminUser = await env.DB.prepare(
         "SELECT id, username FROM users WHERE is_admin = 1 LIMIT 1"
       ).first();
@@ -131,7 +137,6 @@ export async function handleApiRequest(request, env, ctx) {
           {},
           env
         );
-
       const token = await generateJwtToken(
         env,
         adminUser.id,
@@ -210,7 +215,6 @@ export async function handleApiRequest(request, env, ctx) {
             {},
             env
           );
-
         const now = new Date().toISOString();
         const result = await env.DB.prepare(
           "INSERT INTO conversations (creator_id, last_activity_ts) VALUES (?1, ?2) RETURNING id"
@@ -218,7 +222,6 @@ export async function handleApiRequest(request, env, ctx) {
           .bind(userId, now)
           .first();
         const newConversationId = result.id;
-
         await env.DB.batch([
           env.DB.prepare(
             "INSERT INTO conversation_participants (conversation_id, user_id) VALUES (?1, ?2)"
@@ -227,7 +230,6 @@ export async function handleApiRequest(request, env, ctx) {
             "INSERT INTO conversation_participants (conversation_id, user_id) VALUES (?1, ?2)"
           ).bind(newConversationId, partnerId),
         ]);
-
         return jsonResponse(
           { success: true, conversationId: newConversationId, existed: false },
           201,
@@ -249,7 +251,6 @@ export async function handleApiRequest(request, env, ctx) {
         const initialLoadLimit = 50;
         const loadOlderLimit = 30;
         const userId = req.auth.userId;
-
         const participants = await getConversationParticipants(
           env.DB,
           conversationId
@@ -257,12 +258,10 @@ export async function handleApiRequest(request, env, ctx) {
         const partnerId = participants.find((pId) => pId !== userId);
         if (partnerId && (await isBlocked(env.DB, partnerId, userId)))
           return jsonResponse({ error: "Blocked by partner." }, 403, {}, env);
-
         const isReadSubqueryPartnerId = partnerId ?? -1;
         const baseSelect = ` SELECT m.id, m.content, m.timestamp, m.sender_id, u.username as sender_username, m.conversation_id, m.is_edited, m.edited_at, m.reply_to_message_id, reply_msg.content as reply_snippet, reply_sender.username as reply_sender_username, CASE WHEN m.sender_id = ?1 AND EXISTS (SELECT 1 FROM message_read_status mrs WHERE mrs.message_id = m.id AND mrs.user_id = ?2) THEN 1 ELSE 0 END as isReadByPartner FROM messages m JOIN users u ON m.sender_id = u.id LEFT JOIN messages reply_msg ON m.reply_to_message_id = reply_msg.id LEFT JOIN users reply_sender ON reply_msg.sender_id = reply_sender.id `;
         let query;
         const params = [userId, isReadSubqueryPartnerId, conversationId];
-
         if (sinceTimestamp) {
           query = `${baseSelect} WHERE m.conversation_id = ?3 AND m.timestamp > ?4 ORDER BY m.timestamp ASC;`;
           params.push(sinceTimestamp);
@@ -273,7 +272,6 @@ export async function handleApiRequest(request, env, ctx) {
           query = `${baseSelect} WHERE m.conversation_id = ?3 ORDER BY m.timestamp DESC LIMIT ?4;`;
           params.push(initialLoadLimit);
         }
-
         const { results } = await env.DB.prepare(query)
           .bind(...params)
           .all();
@@ -301,14 +299,12 @@ export async function handleApiRequest(request, env, ctx) {
           ? parseInt(body.reply_to_message_id, 10)
           : null;
         const now = new Date().toISOString();
-
         const result = await env.DB.prepare(
           "INSERT INTO messages (conversation_id, sender_id, content, timestamp, reply_to_message_id) VALUES (?1, ?2, ?3, ?4, ?5) RETURNING id"
         )
           .bind(conversationId, userId, content, now, replyToMessageId)
           .first();
         const newMessageId = result.id;
-
         ctx.waitUntil(
           env.DB.prepare(
             "UPDATE conversations SET last_activity_ts = ?1 WHERE id = ?2"
@@ -316,7 +312,6 @@ export async function handleApiRequest(request, env, ctx) {
             .bind(now, conversationId)
             .run()
         );
-
         const newMessageData = await env.DB.prepare(
           `SELECT m.id, m.content, m.timestamp, m.sender_id, ?4 as sender_username, m.conversation_id, m.is_edited, m.edited_at, m.reply_to_message_id, reply_msg.content as reply_snippet, reply_sender.username as reply_sender_username FROM messages m LEFT JOIN messages reply_msg ON m.reply_to_message_id = reply_msg.id LEFT JOIN users reply_sender ON reply_msg.sender_id = reply_sender.id WHERE m.id = ?1 AND m.conversation_id = ?2 AND m.sender_id = ?3`
         )
@@ -327,7 +322,16 @@ export async function handleApiRequest(request, env, ctx) {
           isReadByPartner: false,
           is_edited: false,
         };
-
+        ctx.waitUntil(
+          getConversationParticipants(env.DB, conversationId, userId).then(
+            (pIds) =>
+              broadcastToUsers(
+                pIds,
+                { type: "new_message", message: finalMessageObject },
+                env
+              )
+          )
+        );
         return jsonResponse(
           { success: true, message: finalMessageObject },
           201,
@@ -432,7 +436,6 @@ export async function handleApiRequest(request, env, ctx) {
       });
     }
 
-    // --- ADMIN ROUTES ---
     if (path.startsWith("admin/")) {
       if (method === "GET" && path === "admin/stats") {
         return await requireAdminAuth(request, env, ctx, async (req) => {
@@ -476,14 +479,42 @@ export async function handleApiRequest(request, env, ctx) {
       }
       if (method === "POST" && path === "admin/users") {
         return await requireAdminAuth(request, env, ctx, async (req) => {
-          const passwordHash = await sha256(body.password);
-          const result = await env.DB.prepare(
-            "INSERT INTO users (username, password_hash, is_admin, created_at) VALUES (?1, ?2, 0, ?3) RETURNING id"
+          const username = body.username.trim();
+          const userExists = await env.DB.prepare(
+            "SELECT id FROM users WHERE username = ?1 COLLATE NOCASE"
           )
-            .bind(body.username.trim(), passwordHash, new Date().toISOString())
+            .bind(username)
             .first();
+          if (userExists) {
+            return jsonResponse(
+              { error: "Username already exists." },
+              409,
+              {},
+              env
+            );
+          }
+          const passwordHash = await sha256(body.password);
+          const now = new Date().toISOString();
+          const newUser = await env.DB.prepare(
+            "INSERT INTO users (username, password_hash, is_admin, created_at, last_active_ts) VALUES (?1, ?2, 0, ?3, ?3) RETURNING id, username, created_at, last_active_ts"
+          )
+            .bind(username, passwordHash, now)
+            .first();
+          const admins = await env.DB.prepare(
+            "SELECT id FROM users WHERE is_admin = 1"
+          ).all();
+          const adminIds = admins.results
+            .map((a) => a.id)
+            .filter((id) => id !== req.auth.userId);
+          ctx.waitUntil(
+            broadcastToUsers(
+              adminIds,
+              { type: "user_created", user: newUser },
+              env
+            )
+          );
           return jsonResponse(
-            { success: true, userId: result.id },
+            { success: true, userId: newUser.id },
             201,
             {},
             env
@@ -504,6 +535,19 @@ export async function handleApiRequest(request, env, ctx) {
               {},
               env
             );
+          const admins = await env.DB.prepare(
+            "SELECT id FROM users WHERE is_admin = 1"
+          ).all();
+          const adminIds = admins.results
+            .map((a) => a.id)
+            .filter((id) => id !== req.auth.userId);
+          ctx.waitUntil(
+            broadcastToUsers(
+              adminIds,
+              { type: "user_deleted", userId: userIdToDelete },
+              env
+            )
+          );
           await env.DB.prepare(
             "DELETE FROM users WHERE id = ?1 AND is_admin = 0"
           )
@@ -516,12 +560,7 @@ export async function handleApiRequest(request, env, ctx) {
 
     return jsonResponse({ error: "API Endpoint Not Found" }, 404, {}, env);
   } catch (error) {
-    console.error(
-      `API Handler Error (${method} /api/${path}):`,
-      error.status,
-      error.message,
-      error.stack
-    );
+    console.error(`API Handler Error (${method} /api/${path}):`, error);
     const status = error.status || 500;
     const message =
       status < 500 && error.message ? error.message : "Internal Server Error.";
