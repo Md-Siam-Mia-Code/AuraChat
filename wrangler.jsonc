@@ -15,8 +15,24 @@
 	],
 	"kv_namespaces": [
 		{
-			"binding": "aurachat-kv",
+			"binding": "aurachat_kv",
 			"id": "YOUR_NEW_KV_NAMESPACE_ID_HERE"
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "USER_SESSIONS",
+				"class_name": "UserSession"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": [
+				"UserSession"
+			]
 		}
 	]
 }
