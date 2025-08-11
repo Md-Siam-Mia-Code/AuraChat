@@ -1,0 +1,354 @@
+.glass-panel {
+     background: var(--glass-bg);
+     border-radius: var(--border-radius-lg);
+     border: 1px solid var(--glass-border);
+     backdrop-filter: blur(var(--blur-intensity));
+     -webkit-backdrop-filter: blur(var(--blur-intensity));
+     box-shadow: 0 8px 32px 0 var(--shadow);
+     transition: background var(--transition-medium), border var(--transition-medium);
+}
+
+.glass-panel-inner {
+     background: color-mix(in srgb, var(--card-bg) 50%, transparent);
+     border-radius: var(--border-radius-md);
+     border: 1px solid color-mix(in srgb, var(--glass-border) 60%, transparent);
+     padding: var(--panel-padding);
+}
+
+.loading-overlay {
+     position: fixed;
+     inset: 0;
+     background-color: rgba(10, 5, 20, 0.7);
+     backdrop-filter: blur(8px);
+     display: flex;
+     justify-content: center;
+     align-items: center;
+     z-index: 2000;
+     transition: opacity 0.3s ease;
+}
+
+.loading-overlay[style*='display: none'] {
+     opacity: 0;
+     visibility: hidden;
+     transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+}
+
+.loading-box {
+     text-align: center;
+     color: var(--text-primary);
+}
+
+.loading-logo {
+     width: 80px;
+     height: 80px;
+     margin-bottom: 1.5rem;
+     animation: logoPulse 2.5s infinite ease-in-out;
+     color: var(--text-tertiary);
+}
+
+.loading-box p {
+     font-weight: 500;
+     font-size: 1.15rem;
+     color: inherit;
+     margin: 0;
+}
+
+.modal-view {
+     max-width: 480px;
+     animation: modalShow 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+     position: fixed;
+     top: 50%;
+     left: 50%;
+     transform: translate(-50%, -50%);
+     z-index: 1100;
+}
+
+.modal-content-wrapper {
+     padding: 40px 45px;
+     text-align: center;
+     max-height: 85vh;
+     overflow-y: auto;
+     display: flex;
+     flex-direction: column;
+     align-items: stretch;
+}
+
+.modal-logo {
+     width: 60px;
+     height: 60px;
+     margin: 0 auto 1.5rem;
+     color: var(--text-tertiary);
+}
+
+.modal-close-button {
+     position: absolute !important;
+     top: 15px;
+     right: 15px;
+     z-index: 10;
+}
+
+@keyframes modalShow {
+     from {
+          opacity: 0;
+          transform: translate(-50%, -45%) scale(0.98);
+     }
+
+     to {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1);
+     }
+}
+
+.confirmation-modal-overlay {
+     background: rgba(10, 5, 20, 0.7);
+     backdrop-filter: blur(8px);
+     position: fixed;
+     inset: 0;
+     display: none;
+     align-items: center;
+     justify-content: center;
+     z-index: 1500;
+     animation: fadeIn 0.3s ease;
+}
+
+.confirmation-modal-box {
+     padding: 35px 40px;
+     text-align: center;
+     max-width: 400px;
+     width: 90%;
+}
+
+.confirmation-prompt {
+     font-size: 1.1em;
+     margin-bottom: 25px;
+     color: var(--text-primary);
+}
+
+.confirmation-buttons {
+     display: flex;
+     gap: 15px;
+     justify-content: center;
+}
+
+.error-banner {
+     position: fixed;
+     top: 20px;
+     left: 50%;
+     transform: translateX(-50%);
+     backdrop-filter: blur(8px);
+     background: color-mix(in srgb, var(--c-error) 80%, black 20%);
+     color: white;
+     box-shadow: 0 5px 20px var(--shadow);
+     padding: 12px 45px 12px 18px;
+     border-radius: var(--border-radius-md);
+     display: flex;
+     align-items: center;
+     gap: 10px;
+     z-index: 3000;
+     border: 1px solid color-mix(in srgb, var(--c-error) 90%, white 10%);
+     max-width: 90%;
+}
+
+.error {
+     text-align: center;
+     margin-bottom: 1.5rem;
+     background-color: var(--c-error-bg);
+     border: 1px solid color-mix(in srgb, var(--c-error) 30%, transparent);
+     border-radius: var(--border-radius-sm);
+     padding: 10px 15px;
+     color: var(--c-error);
+     font-weight: 500;
+     font-size: 0.9em;
+}
+
+.error:empty {
+     display: none;
+}
+
+.form-group {
+     margin-bottom: 1.5rem;
+     text-align: left;
+}
+
+.form-group label {
+     display: block;
+     margin-bottom: 0.6rem;
+     font-weight: 500;
+     color: var(--text-secondary);
+     font-size: 0.9em;
+}
+
+.form-group input {
+     width: 100%;
+     padding: 12px 16px;
+     background: var(--card-bg);
+     border: 1px solid var(--glass-border);
+     color: var(--text-primary);
+     border-radius: var(--border-radius-sm);
+     font-family: inherit;
+     font-size: 1rem;
+     min-height: 50px;
+     transition: all var(--transition-fast);
+}
+
+.form-group input:focus {
+     outline: none;
+     border-color: var(--accent1);
+     box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent1), transparent 80%);
+     background: color-mix(in srgb, var(--card-bg) 80%, var(--c-text-on-accent) 5%);
+}
+
+.form-hint {
+     font-size: 0.85em;
+     color: var(--text-tertiary);
+     margin-top: 0.5rem;
+     display: block;
+}
+
+.custom-button {
+     padding: 12px 24px;
+     border-radius: var(--border-radius-pill);
+     border: 1px solid var(--glass-border);
+     background: var(--card-bg);
+     color: var(--text-secondary);
+     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+     transition: all var(--transition-fast);
+     display: inline-flex;
+     align-items: center;
+     justify-content: center;
+     gap: 10px;
+     font-weight: 600;
+     cursor: pointer;
+     user-select: none;
+     outline: none;
+}
+
+.custom-button:hover:not(:disabled) {
+     transform: translateY(-2px);
+     box-shadow: 0 4px 12px var(--shadow);
+     color: var(--text-primary);
+     border-color: color-mix(in srgb, var(--accent2) 50%, transparent);
+}
+
+.custom-button:active:not(:disabled) {
+     transform: translateY(0);
+     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.custom-button.button-primary {
+     background: linear-gradient(45deg, var(--accent1), var(--accent2));
+     color: var(--c-text-on-accent);
+     border: none;
+     box-shadow: 0 4px 15px color-mix(in srgb, var(--accent1), transparent 50%);
+     font-weight: 700;
+}
+
+.custom-button.button-primary:hover:not(:disabled) {
+     box-shadow: 0 6px 20px color-mix(in srgb, var(--accent2), transparent 45%);
+     transform: translateY(-3px) scale(1.02);
+}
+
+.custom-button.icon-button {
+     background: transparent;
+     border: none;
+     color: var(--text-secondary);
+     width: 42px;
+     height: 42px;
+     padding: 0;
+     border-radius: 50%;
+     box-shadow: none;
+}
+
+.custom-button.icon-button .button-icon {
+     font-size: 1.1rem;
+}
+
+.custom-button.icon-button:hover:not(:disabled) {
+     background: color-mix(in srgb, var(--accent1), transparent 88%);
+     color: var(--accent1);
+     transform: scale(1.1);
+     box-shadow: 0 0 10px color-mix(in srgb, var(--accent1), transparent 70%);
+}
+
+.custom-button.button-full {
+     width: 100%;
+}
+
+.custom-button:disabled {
+     opacity: 0.5;
+     cursor: not-allowed;
+     transform: none !important;
+     box-shadow: none !important;
+}
+
+.custom-button.loading .button-spinner,
+.custom-button:disabled .button-spinner {
+     display: inline-block;
+     animation: spin 0.8s linear infinite;
+}
+
+.custom-button.loading .button-text,
+.custom-button.loading .button-icon {
+     display: none;
+}
+
+.button-spinner {
+     display: none;
+}
+
+.custom-button.button-confirm {
+     background: var(--accent1);
+     color: var(--c-text-on-accent);
+     border-color: transparent;
+}
+
+.custom-button.button-cancel {
+     background: var(--card-bg);
+}
+
+.avatar {
+     border: 2px solid var(--glass-border);
+     background: var(--card-bg);
+     width: 48px;
+     height: 48px;
+     font-size: 1.4rem;
+     border-radius: 50%;
+     display: flex;
+     align-items: center;
+     justify-content: center;
+     color: var(--text-primary);
+     position: relative;
+     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+     flex-shrink: 0;
+}
+
+.avatar::after {
+     content: '';
+     position: absolute;
+     width: 12px;
+     height: 12px;
+     border-radius: 50%;
+     background-color: var(--text-tertiary);
+     border: 2px solid var(--glass-bg);
+     bottom: 0;
+     right: 0;
+     transition: background-color var(--transition-fast);
+}
+
+.avatar.online::after {
+     background-color: var(--c-online);
+     box-shadow: 0 0 8px var(--c-online);
+}
+
+.avatar.avatar-small {
+     width: 44px;
+     height: 44px;
+     font-size: 1.2rem;
+}
+
+.list-placeholder {
+     color: var(--text-secondary);
+     padding: 35px 12px;
+     text-align: center;
+     font-style: italic;
+}
