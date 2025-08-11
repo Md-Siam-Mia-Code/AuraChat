@@ -1,0 +1,99 @@
+.app-container {
+     width: 100%;
+     height: 100%;
+     display: flex;
+     justify-content: center;
+     align-items: center;
+     padding: 10px;
+}
+
+.chat-layout,
+.admin-layout {
+     height: calc(100dvh - 40px);
+     width: calc(100vw - 40px);
+     max-width: 1450px;
+     max-height: 950px;
+     display: flex;
+     overflow: hidden;
+}
+
+.admin-layout {
+     max-width: 1200px;
+     max-height: 850px;
+     flex-direction: column;
+}
+
+.left-panel {
+     width: 340px;
+     flex-shrink: 0;
+     padding: 20px;
+     position: relative;
+     display: flex;
+     flex-direction: column;
+     transition: transform var(--transition-slide);
+     border-right: 1px solid var(--glass-border);
+}
+
+.right-panel {
+     flex-grow: 1;
+     display: flex;
+     flex-direction: column;
+     overflow: hidden;
+}
+
+.panel-header,
+.chat-header,
+.admin-header {
+     height: var(--header-height);
+     display: flex;
+     align-items: center;
+     flex-shrink: 0;
+     padding: 0 10px;
+}
+
+.admin-header,
+.chat-header {
+     padding: 0 var(--panel-padding);
+     border-bottom: 1px solid var(--glass-border);
+     justify-content: space-between;
+     position: relative;
+     z-index: 5;
+}
+
+.chat-input-area {
+     border-top: 1px solid var(--glass-border);
+     background: color-mix(in srgb, var(--glass-bg) 40%, transparent);
+     padding: 15px var(--panel-padding);
+     flex-shrink: 0;
+     position: relative;
+}
+
+.panel-overlay {
+     display: none;
+     position: fixed;
+     inset: 0;
+     background-color: rgba(15, 5, 30, 0.5);
+     backdrop-filter: blur(5px);
+     z-index: 98;
+     opacity: 0;
+     visibility: hidden;
+     transition: opacity var(--transition-slide), visibility 0s linear var(--transition-slide);
+}
+
+body.left-panel-active .panel-overlay {
+     display: block;
+     opacity: 1;
+     visibility: visible;
+     transition-delay: 0s;
+}
+
+.admin-content {
+     padding: var(--panel-padding);
+     flex-grow: 1;
+     overflow-y: auto;
+}
+
+.admin-section {
+     padding: 30px;
+     margin-bottom: var(--panel-padding);
+}
