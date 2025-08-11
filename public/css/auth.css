@@ -1,0 +1,78 @@
+.modal-view h2 {
+     font-size: 1.5rem;
+     font-weight: 700;
+}
+
+.modal-instructions {
+     margin-bottom: 2rem;
+     font-size: 1rem;
+     color: var(--text-secondary);
+}
+
+.auth-form .custom-button.button-primary {
+     margin-top: 1.5rem;
+     font-size: 1.05rem;
+     padding: 14px 24px;
+}
+
+.auth-form .form-switch-text {
+     margin-top: 1.5rem;
+     font-size: 0.9em;
+     color: var(--text-secondary);
+}
+
+.tabs {
+     display: flex;
+     margin-bottom: 2rem;
+     width: 100%;
+     border: 1px solid var(--glass-border);
+     padding: 5px;
+     border-radius: var(--border-radius-pill);
+     background: color-mix(in srgb, var(--glass-bg) 50%, transparent);
+}
+
+.tab-button {
+     flex: 1;
+     padding: 10px 14px;
+     border: none;
+     background: transparent;
+     color: var(--text-secondary);
+     font-weight: 500;
+     font-size: 0.95rem;
+     cursor: pointer;
+     border-radius: var(--border-radius-pill);
+     transition: all var(--transition-medium);
+     display: inline-flex;
+     align-items: center;
+     justify-content: center;
+     gap: 8px;
+     white-space: nowrap;
+}
+
+.tab-button.active {
+     background: var(--accent1);
+     color: var(--c-text-on-accent);
+     font-weight: 600;
+     box-shadow: 0 3px 10px color-mix(in srgb, var(--accent1), transparent 70%);
+}
+
+.tab-button:hover:not(.active) {
+     color: var(--accent1);
+     background: color-mix(in srgb, var(--accent1), transparent 90%);
+}
+
+.login-form-panel {
+     display: none;
+     width: 100%;
+     flex-direction: column;
+     opacity: 0;
+     visibility: hidden;
+     transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+}
+
+.login-form-panel.active-panel {
+     display: flex;
+     opacity: 1;
+     visibility: visible;
+     transition: opacity 0.3s ease 0.1s, visibility 0s linear 0s;
+}
