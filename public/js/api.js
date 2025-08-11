@@ -1,9 +1,8 @@
-// public/js/api.js
-
 import {
   API_BASE_URL,
   MESSAGES_INITIAL_LOAD_LIMIT,
   MESSAGES_LOAD_OLDER_LIMIT,
+  SESSION_STORAGE_KEY,
 } from "./constants.js";
 import { appState, setState } from "./state.js";
 import { dom } from "./dom.js";
@@ -20,7 +19,6 @@ import {
   showElement,
   hideElement,
   adjustTextareaHeight,
-  hideEmojiPanel,
 } from "./ui.js";
 import {
   renderConversationList,
@@ -33,6 +31,7 @@ import {
   renderAdminStats,
   renderAdminUserList,
   scrollToMessage,
+  clearChatView,
 } from "./render.js";
 import { connectWebSocket } from "./websocket.js";
 import { escapeHtml } from "./utils.js";
@@ -40,10 +39,13 @@ import { escapeHtml } from "./utils.js";
 async function apiCall(endpoint, method = "GET", body = null) {
   const url = `${API_BASE_URL}${endpoint}`;
   const headers = { "Content-Type": "application/json" };
-  if (appState.currentUser?.token)
+  if (appState.currentUser?.token) {
     headers["Authorization"] = `Bearer ${appState.currentUser.token}`;
+  }
   const options = { method, headers };
-  if (body && method !== "GET") options.body = JSON.stringify(body);
+  if (body && method !== "GET") {
+    options.body = JSON.stringify(body);
+  }
   try {
     const response = await fetch(url, options);
     if (response.status === 204) return { success: true };
@@ -63,7 +65,7 @@ async function apiCall(endpoint, method = "GET", body = null) {
 }
 
 export async function checkSetupStatus() {
-  return await apiCall("/setup/status");
+  return apiCall("/setup/status");
 }
 
 export async function fetchChatData() {
@@ -216,7 +218,7 @@ export async function handleUserLoginSubmit() {
     });
     setState({ currentUser: { ...response.user, token: response.token } });
     sessionStorage.setItem(
-      "connected-session-v2",
+      SESSION_STORAGE_KEY,
       JSON.stringify(appState.currentUser)
     );
     connectWebSocket();
@@ -241,7 +243,7 @@ export async function handleAdminLoginSubmit() {
     });
     setState({ currentUser: { ...response.user, token: response.token } });
     sessionStorage.setItem(
-      "connected-session-v2",
+      SESSION_STORAGE_KEY,
       JSON.stringify(appState.currentUser)
     );
     connectWebSocket();
@@ -300,6 +302,7 @@ export async function handleBlockUser() {
     await apiCall("/blocks", "POST", { userId });
     await fetchChatData();
     await fetchBlockedUsers();
+    clearChatView();
   }
 }
 
@@ -322,6 +325,7 @@ export async function handleAdminAddUserSubmit() {
   try {
     await apiCall("/admin/users", "POST", { username, password });
     dom.adminAddUserForm.reset();
+    setFormError("adminUser", "");
     await fetchAdminUsers();
   } catch (e) {
     setFormError("adminUser", e.message);
@@ -341,89 +345,17 @@ export async function handleAdminDeleteUser(delegate) {
 }
 
 export async function handleDeleteMessage(messageId, messageElement) {
-  if (await showConfirmation("Delete this message?")) {
+  if (await showConfirmation("Delete this message permanently?")) {
     messageElement.style.opacity = "0.5";
     await apiCall(`/messages/${messageId}`, "DELETE");
     messageElement.remove();
   }
 }
 
-export function handleShowEditInput(messageId, messageElement) {
-  cancelEdit();
-  setState({ editingMessageId: messageId });
-  messageElement.classList.add("editing");
-  const contentSpan = messageElement.querySelector(".message-content");
-  const originalContent =
-    appState.messages
-      .get(appState.currentConversationId)
-      ?.find((m) => m.id == messageId)?.content || "";
-
-  const editContainer = document.createElement("div");
-  editContainer.className = "edit-input-container";
-  const editInput = document.createElement("textarea");
-  editInput.className = "edit-textarea";
-  editInput.value = originalContent;
-
-  const buttonGroup = document.createElement("div");
-  buttonGroup.className = "edit-button-group";
-  const saveBtn = document.createElement("button");
-  saveBtn.className = "custom-button button-confirm";
-  saveBtn.innerHTML = '<i class="fa-solid fa-check"></i>';
-  const cancelBtn = document.createElement("button");
-  cancelBtn.className = "custom-button button-cancel";
-  cancelBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
-
-  buttonGroup.append(cancelBtn, saveBtn);
-  editContainer.append(editInput, buttonGroup);
-
-  if (contentSpan) contentSpan.style.display = "none";
-  messageElement.appendChild(editContainer);
-  editInput.focus();
-
-  cancelBtn.onclick = () => cancelEdit();
-  saveBtn.onclick = async () => {
-    const newContent = editInput.value.trim();
-    if (newContent && newContent !== originalContent) {
-      await apiCall(`/messages/${messageId}`, "PATCH", { content: newContent });
-      if (contentSpan)
-        contentSpan.innerHTML = `${escapeHtml(newContent)} <span class="edited-indicator">(edited)</span>`;
-    }
-    cancelEdit();
-  };
-}
-
-export function cancelEdit() {
-  if (!appState.editingMessageId) return;
-  const el = dom.messageArea.querySelector(
-    `.message.editing[data-message-id="${appState.editingMessageId}"]`
-  );
-  if (el) {
-    el.classList.remove("editing");
-    el.querySelector(".edit-input-container")?.remove();
-    const contentSpan = el.querySelector(".message-content");
-    if (contentSpan) contentSpan.style.display = "";
+export async function handleEditMessage(messageId, newContent, onFinish) {
+  try {
+    await apiCall(`/messages/${messageId}`, "PATCH", { content: newContent });
+  } finally {
+    onFinish();
   }
-  setState({ editingMessageId: null });
-}
-
-export function handleReplyToMessage(messageId) {
-  const msg = appState.messages
-    .get(appState.currentConversationId)
-    ?.find((m) => m.id == messageId);
-  if (!msg) return;
-  cancelEdit();
-  setState({ replyingToMessageId: messageId });
-  dom.replyContextUser.textContent = escapeHtml(msg.sender_username);
-  dom.replyContextText.textContent = escapeHtml(msg.content.substring(0, 100));
-  showElement(dom.replyContextArea);
-  dom.messageInput?.focus();
-}
-
-export function cancelReply() {
-  setState({ replyingToMessageId: null });
-  hideElement(dom.replyContextArea);
-}
-
-export function scrollToReply(messageId) {
-  scrollToMessage(messageId);
 }
