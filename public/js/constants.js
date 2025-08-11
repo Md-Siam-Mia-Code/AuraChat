@@ -1,3 +1,4 @@
+// public/js/constant.js
 export const POLLING_INTERVAL_MS = 3500;
 export const STATUS_UPDATE_INTERVAL_MS = 60000;
 export const WS_HEARTBEAT_INTERVAL_MS = 30000;

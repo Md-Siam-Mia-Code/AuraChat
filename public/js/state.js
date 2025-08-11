@@ -1,3 +1,4 @@
+// public/js/state.js
 export const appState = {
   currentView: "loading",
   currentUser: null,
