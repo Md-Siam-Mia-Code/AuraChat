@@ -1,111 +1,92 @@
-import { WEBSOCKET_URL, WS_HEARTBEAT_INTERVAL_MS } from "./constants.js";
+import { appState, setState } from "./state.js";
+import * as api from "./api.js";
 import {
-  appState,
-  setState,
-  wsHeartbeatInterval,
-  setWsHeartbeatInterval,
-} from "./state.js";
-import {
+  addMessageToUI,
   renderConversationList,
   renderAdminUserList,
   updateChatHeader,
-  updateMessageReadStatusUI,
+  updateConversationListSnippet,
 } from "./render.js";
 
-function handleUserOnlineStatusUpdate(userId, isOnline, timestamp) {
-  let changed = false;
-  const convo = appState.conversations.find((c) => c.partner_id === userId);
-  if (convo) {
-    convo.partner_last_active_ts = timestamp;
-    changed = true;
-    if (appState.currentConversationId === convo.id) updateChatHeader(convo);
-  }
-  const user = appState.users.find((u) => u.id === userId);
-  if (user) {
-    user.last_active_ts = timestamp;
-    changed = true;
-  }
-  if (changed) {
-    renderConversationList();
-    if (appState.currentView === "admin") renderAdminUserList();
+let ws;
+let pingInterval;
+
+function handleUserListUpdate() {
+  if (appState.currentView === "admin") {
+    api.fetchAdminUsers();
+    api.fetchAdminStats();
+  } else {
+    api.fetchChatData();
   }
 }
-function handleMessageReadStatusUpdate(conversationId, messageIds, readerId) {
-  const messages = appState.messages.get(conversationId);
-  if (!messages || readerId === appState.currentUser?.id) return;
-  messageIds.forEach((id) => {
-    const msg = messages.find((m) => m.id === id);
-    if (
-      msg &&
-      msg.sender_id === appState.currentUser.id &&
-      !msg.isReadByPartner
-    ) {
-      msg.isReadByPartner = true;
-      const el = document.querySelector(`.message[data-message-id="${id}"]`);
-      if (el) updateMessageReadStatusUI(el, true);
-    }
-  });
+
+function handleIncomingMessage(message) {
+  if (message.conversation_id === appState.currentConversationId) {
+    addMessageToUI(message);
+  }
+  updateConversationListSnippet(message.conversation_id, message);
 }
-function startWebSocketTimers() {
-  if (wsHeartbeatInterval) clearInterval(wsHeartbeatInterval);
-  setWsHeartbeatInterval(
-    setInterval(() => {
-      if (appState.ws?.readyState === WebSocket.OPEN) {
-        appState.ws.send(JSON.stringify({ type: "ping" }));
-      }
-    }, WS_HEARTBEAT_INTERVAL_MS)
-  );
-}
-function stopWebSocketTimers() {
-  if (wsHeartbeatInterval) clearInterval(wsHeartbeatInterval);
-  setWsHeartbeatInterval(null);
-}
+
 export function connectWebSocket() {
-  if (!appState.currentUser?.token || appState.ws) return;
-  const ws = new WebSocket(WEBSOCKET_URL);
+  if (
+    ws &&
+    (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)
+  ) {
+    return;
+  }
+  const token = appState.currentUser?.token;
+  if (!token) return;
+
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const wsUrl = `${protocol}//${window.location.host}/ws?token=${encodeURIComponent(token)}`;
+
+  ws = new WebSocket(wsUrl);
   setState({ ws });
+
   ws.onopen = () => {
-    ws.send(
-      JSON.stringify({
-        type: "authenticate",
-        token: appState.currentUser.token,
-      })
-    );
-    startWebSocketTimers();
+    console.log("AuraChat WebSocket connected.");
+    clearInterval(pingInterval);
+    pingInterval = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "ping" }));
+      }
+    }, 30000);
   };
+
   ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
       switch (data.type) {
-        case "user_online":
-        case "user_offline":
-          handleUserOnlineStatusUpdate(
-            data.userId,
-            data.type === "user_online",
-            data.timestamp
-          );
+        case "user_created":
+        case "user_deleted":
+          handleUserListUpdate();
           break;
-        case "message_read":
-          handleMessageReadStatusUpdate(
-            data.conversationId,
-            data.messageIds,
-            data.readerId
-          );
+        case "new_message":
+          handleIncomingMessage(data.message);
           break;
       }
     } catch (e) {
       console.error("Error processing WebSocket message:", e);
     }
   };
-  ws.onerror = (error) => console.error("WebSocket error:", error);
+
   ws.onclose = () => {
-    stopWebSocketTimers();
+    console.log("AuraChat WebSocket disconnected. Reconnecting in 5s...");
+    clearInterval(pingInterval);
     setState({ ws: null });
+    setTimeout(connectWebSocket, 5000);
+  };
+
+  ws.onerror = (error) => {
+    console.error("WebSocket error:", error);
+    ws.close();
   };
 }
+
 export function disconnectWebSocket() {
-  stopWebSocketTimers();
+  clearInterval(pingInterval);
   if (appState.ws) {
+    appState.ws.onclose = null; // Prevent automatic reconnection
     appState.ws.close();
     setState({ ws: null });
   }
