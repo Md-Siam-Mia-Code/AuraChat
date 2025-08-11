@@ -1,15 +1,8 @@
 // public/js/view.js
-
 import { dom } from "./dom.js";
-import { appState, setState } from "./state.js"; // Corrected: Removed SESSION_STORAGE_KEY
-import { SESSION_STORAGE_KEY } from "./constants.js"; // Corrected: Added import from constants.js
-import {
-  showElement,
-  hideElement,
-  hideError,
-  setFormError,
-  showError,
-} from "./ui.js";
+import { appState, setState } from "./state.js";
+import { SESSION_STORAGE_KEY } from "./constants.js";
+import { showElement, hideElement, showError } from "./ui.js";
 import { isMobileView, escapeHtml } from "./utils.js";
 import {
   checkSetupStatus,
@@ -18,13 +11,30 @@ import {
   fetchAdminUsers,
 } from "./api.js";
 import { connectWebSocket } from "./websocket.js";
-import {
-  renderConversationList,
-  clearChatView,
-  renderAdminStats,
-  renderAdminUserList,
-  updateChatHeader,
-} from "./render.js";
+import { updateChatHeader } from "./render.js";
+
+const screens = {
+  loading: dom.loadingScreen,
+  onboarding: dom.onboardingScreen,
+  login: dom.loginScreen,
+  chat: dom.chatApp,
+  admin: dom.adminDashboard,
+};
+
+export function switchView(newView) {
+  if (appState.currentView === newView) return;
+
+  Object.values(screens).forEach((screen) => screen && hideElement(screen));
+
+  const newScreen = screens[newView];
+  if (newScreen) {
+    showElement(newScreen);
+  } else {
+    console.error(`Error: Cannot switch to unknown view '${newView}'.`);
+  }
+
+  setState({ currentView: newView });
+}
 
 export function handleApiError(error) {
   if (
@@ -62,28 +72,16 @@ export function selectConversation(conversationId) {
   if (isMobileView()) document.body.classList.remove("left-panel-active");
 }
 
-export function switchView(newView) {
-  if (appState.currentView === newView) return;
-  [
-    "loadingScreen",
-    "onboardingScreen",
-    "loginScreen",
-    "chatAppScreen",
-    "adminDashboardScreen",
-  ].forEach((screenId) => hideElement(dom[screenId]));
-  showElement(dom[`${newView}Screen`]);
-  setState({ currentView: newView });
-}
-
 export function showUserLoginForm() {
-  dom.adminLoginForm.style.display = "none";
-  dom.userLoginForm.style.display = "flex";
+  dom.adminLoginForm.classList.remove("active-panel");
+  dom.userLoginForm.classList.add("active-panel");
   dom.adminLoginTab.classList.remove("active");
   dom.userLoginTab.classList.add("active");
 }
+
 export function showAdminLoginForm() {
-  dom.userLoginForm.style.display = "none";
-  dom.adminLoginForm.style.display = "flex";
+  dom.userLoginForm.classList.remove("active-panel");
+  dom.adminLoginForm.classList.add("active-panel");
   dom.userLoginTab.classList.remove("active");
   dom.adminLoginTab.classList.add("active");
 }
@@ -97,9 +95,11 @@ export async function initializeApp() {
       if (!user.token) throw new Error("Invalid session");
       setState({ currentUser: user });
       connectWebSocket();
-      user.isAdmin
-        ? await initializeAdminDashboard()
-        : await initializeChatView();
+      if (user.isAdmin) {
+        await initializeAdminDashboard();
+      } else {
+        await initializeChatView();
+      }
       return;
     } catch (e) {
       sessionStorage.removeItem(SESSION_STORAGE_KEY);
@@ -131,6 +131,5 @@ export async function initializeAdminDashboard() {
   dom.adminUsernameDisplay.textContent = escapeHtml(
     appState.currentUser.username
   );
-  await fetchAdminStats();
-  await fetchAdminUsers();
+  await Promise.all([fetchAdminStats(), fetchAdminUsers()]);
 }
