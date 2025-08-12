@@ -1,4 +1,4 @@
-// public/js/constant.js
+// public/js/constants.js
 export const POLLING_INTERVAL_MS = 3500;
 export const STATUS_UPDATE_INTERVAL_MS = 60000;
 export const WS_HEARTBEAT_INTERVAL_MS = 30000;
@@ -13,6 +13,7 @@ export const MESSAGES_INITIAL_LOAD_LIMIT = 50;
 export const MESSAGES_LOAD_OLDER_LIMIT = 30;
 export const SCROLL_LOAD_THRESHOLD = 100;
 export const MANUAL_BUTTON_SCROLL_THRESHOLD = 150;
+export const SWIPE_THRESHOLD = 60; // Pixels required to trigger reply
 export const WEBSOCKET_URL =
   (window.location.protocol === "https:" ? "wss://" : "ws://") +
   window.location.host +
