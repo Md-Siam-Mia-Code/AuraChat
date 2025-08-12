@@ -1,4 +1,3 @@
-// wrangler.jsonc
 {
 	"name": "aurachat",
 	"main": "src/index.js",
@@ -22,16 +21,16 @@
 	"durable_objects": {
 		"bindings": [
 			{
-				"name": "USER_SESSIONS",
-				"class_name": "UserSession"
+				"name": "ROUTER_DO",
+				"class_name": "RouterDO"
 			}
 		]
 	},
 	"migrations": [
 		{
-			"tag": "v1",
-			"new_classes": [
-				"UserSession"
+			"tag": "v3",
+			"new_sqlite_classes": [
+				"RouterDO"
 			]
 		}
 	]
