@@ -1,3 +1,4 @@
+// public/js/api.js
 import {
   API_BASE_URL,
   MESSAGES_INITIAL_LOAD_LIMIT,
@@ -32,6 +33,8 @@ import {
   renderAdminUserList,
   scrollToMessage,
   clearChatView,
+  renderMessageEditUI,
+  removeMessageEditUI,
 } from "./render.js";
 import { connectWebSocket } from "./websocket.js";
 import { escapeHtml } from "./utils.js";
@@ -101,19 +104,25 @@ export async function fetchBlockedUsers() {
 
 export async function fetchMessagesForConversation(id, isManual = false) {
   if (appState.isLoading.messages) return;
+  const numId = Number(id);
   setState({ isLoading: { ...appState.isLoading, messages: true } });
   if (isManual) setButtonLoading(dom.refreshMessagesButton, true);
   renderMessages(id);
   try {
-    const messages = await apiCall(`/conversations/${id}/messages`);
-    appState.messages.set(id, messages || []);
-    appState.oldestMessageTimestamp.set(id, messages?.[0]?.timestamp);
+    const messages = await apiCall(`/conversations/${numId}/messages`);
+    const newMessagesMap = new Map(appState.messages);
+    newMessagesMap.set(numId, messages || []);
+    setState({ messages: newMessagesMap });
+
+    appState.oldestMessageTimestamp.set(numId, messages?.[0]?.timestamp);
     appState.hasReachedOldestMessage.set(
-      id,
+      numId,
       (messages?.length || 0) < MESSAGES_INITIAL_LOAD_LIMIT
     );
   } catch (e) {
-    appState.messages.set(id, []);
+    const newMessagesMap = new Map(appState.messages);
+    newMessagesMap.set(numId, []);
+    setState({ messages: newMessagesMap });
   } finally {
     setState({ isLoading: { ...appState.isLoading, messages: false } });
     renderMessages(id);
@@ -122,31 +131,35 @@ export async function fetchMessagesForConversation(id, isManual = false) {
 }
 
 export async function fetchOlderMessages(id) {
+  const numId = Number(id);
   if (
     appState.isLoading.olderMessages ||
-    appState.hasReachedOldestMessage.get(id)
+    appState.hasReachedOldestMessage.get(numId)
   )
     return;
   setState({ isLoading: { ...appState.isLoading, olderMessages: true } });
-  const beforeTs = appState.oldestMessageTimestamp.get(id);
+  const beforeTs = appState.oldestMessageTimestamp.get(numId);
   if (!beforeTs) {
     setState({ isLoading: { ...appState.isLoading, olderMessages: false } });
     return;
   }
   try {
     const olderMessages = await apiCall(
-      `/conversations/${id}/messages?before_ts=${encodeURIComponent(beforeTs)}`
+      `/conversations/${numId}/messages?before_ts=${encodeURIComponent(beforeTs)}`
     );
     if (olderMessages?.length > 0) {
-      const currentMessages = appState.messages.get(id) || [];
-      appState.messages.set(id, [...olderMessages, ...currentMessages]);
-      appState.oldestMessageTimestamp.set(id, olderMessages[0].timestamp);
+      const newMessagesMap = new Map(appState.messages);
+      const currentMessages = newMessagesMap.get(numId) || [];
+      newMessagesMap.set(numId, [...olderMessages, ...currentMessages]);
+      setState({ messages: newMessagesMap });
+
+      appState.oldestMessageTimestamp.set(numId, olderMessages[0].timestamp);
       if (olderMessages.length < MESSAGES_LOAD_OLDER_LIMIT) {
-        appState.hasReachedOldestMessage.set(id, true);
+        appState.hasReachedOldestMessage.set(numId, true);
       }
-      renderMessages(id);
+      renderMessages(id, { keepScrollPosition: true });
     } else {
-      appState.hasReachedOldestMessage.set(id, true);
+      appState.hasReachedOldestMessage.set(numId, true);
       renderMessages(id);
     }
   } finally {
@@ -258,29 +271,66 @@ export async function handleAdminLoginSubmit() {
 export async function handleSendMessage() {
   const content = dom.messageInput.value.trim();
   if (!content) return;
+  const { replyingToMessageId, currentConversationId } = appState;
+  const numConversationId = Number(currentConversationId);
   const tempId = `temp_${Date.now()}`;
+
   const optimisticMessage = {
     id: tempId,
     content,
     sender_id: appState.currentUser.id,
     timestamp: new Date().toISOString(),
     isOptimistic: true,
+    reply_to_message_id: replyingToMessageId,
   };
+  if (replyingToMessageId) {
+    const original = (appState.messages.get(numConversationId) || []).find(
+      (m) => String(m.id) === String(replyingToMessageId)
+    );
+    if (original) {
+      optimisticMessage.reply_sender_username = original.sender_username;
+      optimisticMessage.reply_snippet = original.content;
+    }
+  }
+
+  const newMessagesMap = new Map(appState.messages);
+  const currentMessages = newMessagesMap.get(numConversationId) || [];
+  newMessagesMap.set(numConversationId, [
+    ...currentMessages,
+    optimisticMessage,
+  ]);
+  setState({ messages: newMessagesMap });
+
   addMessageToUI(optimisticMessage);
+  cancelReply();
   dom.messageInput.value = "";
   adjustTextareaHeight();
+
   try {
     const result = await apiCall(
-      `/conversations/${appState.currentConversationId}/messages`,
+      `/conversations/${numConversationId}/messages`,
       "POST",
-      { content }
+      { content, reply_to_message_id: replyingToMessageId }
     );
+
+    const finalMessagesMap = new Map(appState.messages);
+    const messages = finalMessagesMap.get(numConversationId) || [];
+    const newMessages = messages.map((m) =>
+      m.id === tempId ? result.message : m
+    );
+    finalMessagesMap.set(numConversationId, newMessages);
+    setState({ messages: finalMessagesMap });
+
     updateOptimisticMessage(tempId, result.message);
-    updateConversationListSnippet(
-      appState.currentConversationId,
-      result.message
-    );
+    updateConversationListSnippet(currentConversationId, result.message);
   } catch (e) {
+    const finalMessagesMap = new Map(appState.messages);
+    const messages = finalMessagesMap.get(numConversationId) || [];
+    finalMessagesMap.set(
+      numConversationId,
+      messages.filter((m) => m.id !== tempId)
+    );
+    setState({ messages: finalMessagesMap });
     removeOptimisticMessage(tempId);
   }
 }
@@ -347,8 +397,11 @@ export async function handleAdminDeleteUser(delegate) {
 export async function handleDeleteMessage(messageId, messageElement) {
   if (await showConfirmation("Delete this message permanently?")) {
     messageElement.style.opacity = "0.5";
-    await apiCall(`/messages/${messageId}`, "DELETE");
-    messageElement.remove();
+    try {
+      await apiCall(`/messages/${messageId}`, "DELETE");
+    } catch (e) {
+      messageElement.style.opacity = "1";
+    }
   }
 }
 
@@ -356,6 +409,53 @@ export async function handleEditMessage(messageId, newContent, onFinish) {
   try {
     await apiCall(`/messages/${messageId}`, "PATCH", { content: newContent });
   } finally {
-    onFinish();
+    if (onFinish) onFinish();
   }
+}
+
+export function startEditingMessage(messageId, messageElement) {
+  if (appState.editingMessageId) {
+    cancelEdit();
+  }
+  setState({ editingMessageId: messageId });
+  renderMessageEditUI(messageElement);
+}
+
+export function cancelEdit() {
+  if (appState.editingMessageId) {
+    const el = document.querySelector(
+      `[data-message-id="${appState.editingMessageId}"]`
+    );
+    if (el) removeMessageEditUI(el);
+  }
+  setState({ editingMessageId: null });
+}
+
+export function handleReplyToMessage(messageId) {
+  const numConversationId = Number(appState.currentConversationId);
+  const currentMessages = appState.messages.get(numConversationId) || [];
+
+  const messageToReply = currentMessages.find(
+    (m) => String(m.id) === String(messageId)
+  );
+
+  if (!messageToReply) {
+    console.error("Could not find message to reply to with ID:", messageId);
+    return;
+  }
+
+  setState({ replyingToMessageId: messageToReply.id });
+  dom.replyContextUser.textContent = escapeHtml(messageToReply.sender_username);
+  dom.replyContextText.textContent = escapeHtml(messageToReply.content);
+  showElement(dom.replyContextArea);
+  dom.messageInput.focus();
+}
+
+export function cancelReply() {
+  setState({ replyingToMessageId: null });
+  hideElement(dom.replyContextArea);
+}
+
+export function scrollToReply(messageId) {
+  scrollToMessage(messageId);
 }
