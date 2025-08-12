@@ -1,5 +1,4 @@
 // public/js/utils.js
-
 import {
   THEME_STORAGE_KEY,
   ONLINE_THRESHOLD_MINUTES,
@@ -8,10 +7,14 @@ import {
 
 export const debounce = (func, wait) => {
   let timeout;
-  return (...args) => {
+  const debounced = (...args) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => func.apply(this, args), wait);
   };
+  debounced.cancel = () => {
+    clearTimeout(timeout);
+  };
+  return debounced;
 };
 
 export const formatDate = (isoString) => {
@@ -26,6 +29,40 @@ export const formatDate = (isoString) => {
     return "Invalid time";
   }
 };
+
+export function formatTimeGap(isoString) {
+  if (!isoString) return "";
+  const date = new Date(isoString);
+  const now = new Date();
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate()
+  );
+  const startOfYesterday = new Date(startOfToday);
+  startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+
+  const time = date.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  if (date >= startOfToday) {
+    return `Today at ${time}`;
+  }
+  if (date >= startOfYesterday) {
+    return `Yesterday at ${time}`;
+  }
+  return date.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
 
 export function escapeHtml(unsafe) {
   return unsafe
@@ -85,5 +122,4 @@ export function getInitialTheme() {
       : "light";
 }
 
-// THIS FUNCTION WAS MISSING
 export const isMobileView = () => window.innerWidth <= MOBILE_BREAKPOINT;
