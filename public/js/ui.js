@@ -115,3 +115,38 @@ function populateEmojiPanel() {
     dom.emojiGrid.appendChild(btn);
   });
 }
+
+function getOrCreateTypingIndicator() {
+  const wrapper = dom.messageArea.querySelector(".messages-list-wrapper");
+  let indicator = wrapper.querySelector(".typing-indicator-bubble");
+  if (!indicator) {
+    indicator = document.createElement("div");
+    indicator.className = "message received typing-indicator-bubble";
+    indicator.style.display = "none";
+    indicator.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>`;
+    wrapper.appendChild(indicator);
+  }
+  return indicator;
+}
+
+export function renderTypingIndicator(show, conversationId) {
+  if (conversationId !== appState.currentConversationId) return;
+
+  const indicator = getOrCreateTypingIndicator();
+  const timeout = appState.typingIndicators.get(conversationId);
+
+  if (timeout) clearTimeout(timeout);
+
+  if (show) {
+    showElement(indicator);
+    scrollToBottom(dom.messageArea);
+    const newTimeout = setTimeout(() => {
+      hideElement(indicator);
+      appState.typingIndicators.delete(conversationId);
+    }, 5000); // Self-healing timeout
+    appState.typingIndicators.set(conversationId, newTimeout);
+  } else {
+    hideElement(indicator);
+    appState.typingIndicators.delete(conversationId);
+  }
+}
