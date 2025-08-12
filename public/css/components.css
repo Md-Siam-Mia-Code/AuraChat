@@ -1,3 +1,4 @@
+/* public/css/components.css */
 .glass-panel {
      background: var(--glass-bg);
      border-radius: var(--border-radius-lg);
@@ -134,7 +135,9 @@
      position: fixed;
      top: 20px;
      left: 50%;
-     transform: translateX(-50%);
+     transform: translate(-50%, -150%);
+     opacity: 0;
+     visibility: hidden;
      backdrop-filter: blur(8px);
      background: color-mix(in srgb, var(--c-error) 80%, black 20%);
      color: white;
@@ -147,6 +150,35 @@
      z-index: 3000;
      border: 1px solid color-mix(in srgb, var(--c-error) 90%, white 10%);
      max-width: 90%;
+     transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease, visibility 0s linear 0.4s;
+}
+
+.error-banner.show {
+     transform: translate(-50%, 0);
+     opacity: 1;
+     visibility: visible;
+     transition-delay: 0s;
+}
+
+.error-banner-close {
+     position: absolute;
+     top: 50%;
+     right: 8px;
+     transform: translateY(-50%);
+     background: none;
+     border: none;
+     color: white;
+     opacity: 0.7;
+     padding: 8px;
+     cursor: pointer;
+     border-radius: 50%;
+     display: flex;
+     transition: opacity 0.2s, background-color 0.2s;
+}
+
+.error-banner-close:hover {
+     opacity: 1;
+     background-color: rgba(255, 255, 255, 0.15);
 }
 
 .error {
