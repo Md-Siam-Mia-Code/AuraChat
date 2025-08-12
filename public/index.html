@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 
@@ -19,6 +20,7 @@
 	<link rel="stylesheet" href="./css/chat.css">
 	<link rel="stylesheet" href="./css/admin.css">
 	<link rel="stylesheet" href="./css/responsive.css">
+	<link rel="shortcut icon" href="./assets/logo.png" type="image/x-icon">
 </head>
 
 <body>
@@ -92,12 +94,13 @@
 				<p class="modal-instructions">Connect and Converse Securely.</p>
 				<div id="login-error" class="error modal-error" role="alert" aria-live="polite"></div>
 				<div class="tabs">
-					<button id="user-login-tab" class="tab-button"><i class="fa-solid fa-user-astronaut"></i> User
+					<button id="user-login-tab" class="tab-button active"><i
+							class="fa-solid fa-user-astronaut"></i> User
 						Login</button>
-					<button id="admin-login-tab" class="tab-button active"><i class="fa-solid fa-user-shield"></i>
+					<button id="admin-login-tab" class="tab-button"><i class="fa-solid fa-user-shield"></i>
 						Admin Access</button>
 				</div>
-				<form id="user-login-form" class="login-form-panel auth-form" novalidate>
+				<form id="user-login-form" class="login-form-panel auth-form active-panel" novalidate>
 					<div class="form-group">
 						<label for="login-username">Username</label>
 						<input type="text" id="login-username" name="username" placeholder="Enter your username"
@@ -114,7 +117,7 @@
 						<i class="fa-solid fa-circle-notch fa-spin button-spinner" style="display: none;"></i>
 					</button>
 				</form>
-				<form id="admin-login-form" class="login-form-panel auth-form active-panel" novalidate>
+				<form id="admin-login-form" class="login-form-panel auth-form" novalidate>
 					<div class="form-group">
 						<label for="admin-master-password">Master Password</label>
 						<input type="password" id="admin-master-password" name="masterPassword"
@@ -184,8 +187,6 @@
 								<span class="contact-name" id="chat-partner-name"></span>
 								<div class="status-and-typing">
 									<span class="contact-status" id="chat-partner-status"></span>
-									<span class="typing-indicator" id="chat-typing-indicator"
-										style="display: none;">typing...</span>
 								</div>
 							</div>
 						</div>
