@@ -1,3 +1,4 @@
+// public/js/dom.js
 export const dom = {
   body: document.body,
   html: document.documentElement,

@@ -1,3 +1,4 @@
+// src/index.js
 import { getAssetFromKV } from "@cloudflare/kv-asset-handler";
 import manifestJSON from "__STATIC_CONTENT_MANIFEST";
 import { handleApiRequest } from "./api.js";

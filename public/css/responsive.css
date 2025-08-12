@@ -1,3 +1,4 @@
+/* public/css/responsive.css */
 @media (max-width: 1024px) {
      .admin-actions-container {
           grid-template-columns: 1fr;
