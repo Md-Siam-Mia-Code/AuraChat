@@ -109,3 +109,27 @@ export async function getConversationParticipants(
     return [];
   }
 }
+
+/** Retrieves all users who share a conversation with a given user */
+export async function getConversationPartnersForUser(db, userId) {
+  if (!db || !userId) {
+    console.warn(
+      "getConversationPartnersForUser skipped: Missing db or userId."
+    );
+    return [];
+  }
+  try {
+    const query = `
+      SELECT DISTINCT p2.user_id
+      FROM conversation_participants p1
+      JOIN conversation_participants p2 ON p1.conversation_id = p2.conversation_id
+      WHERE p1.user_id = ?1 AND p2.user_id != ?1
+    `;
+    const stmt = db.prepare(query);
+    const { results } = await stmt.bind(userId).all();
+    return results ? results.map((row) => row.user_id) : [];
+  } catch (e) {
+    console.error(`Error getting partners for user ${userId}:`, e);
+    return [];
+  }
+}
