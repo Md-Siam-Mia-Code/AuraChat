@@ -1,3 +1,4 @@
+// src/api.js
 import { jsonResponse, sha256, validateInput } from "./utils.js";
 import { getAppConfig, isBlocked, getConversationParticipants } from "./db.js";
 import {
@@ -7,9 +8,11 @@ import {
   verifyMasterPassword,
 } from "./auth.js";
 
-async function broadcastToUsers(userIds, message, env) {
-  if (!userIds || userIds.length === 0) return;
-  const stubs = userIds.map((id) => {
+async function broadcastToUsers(userIds, message, env, excludeUserId = null) {
+  const recipients = userIds.filter((id) => id !== excludeUserId);
+  if (!recipients || recipients.length === 0) return;
+
+  const stubs = recipients.map((id) => {
     const durableId = env.USER_SESSIONS.idFromName(id.toString());
     return env.USER_SESSIONS.get(durableId);
   });
@@ -323,13 +326,13 @@ export async function handleApiRequest(request, env, ctx) {
           is_edited: false,
         };
         ctx.waitUntil(
-          getConversationParticipants(env.DB, conversationId, userId).then(
-            (pIds) =>
-              broadcastToUsers(
-                pIds,
-                { type: "new_message", message: finalMessageObject },
-                env
-              )
+          getConversationParticipants(env.DB, conversationId).then((pIds) =>
+            broadcastToUsers(
+              pIds,
+              { type: "new_message", payload: finalMessageObject },
+              env,
+              userId
+            )
           )
         );
         return jsonResponse(
@@ -369,7 +372,7 @@ export async function handleApiRequest(request, env, ctx) {
         const userId = req.auth.userId;
         const newContent = body.content.trim();
         const originalMessage = await env.DB.prepare(
-          "SELECT sender_id FROM messages WHERE id = ?1"
+          "SELECT sender_id, conversation_id FROM messages WHERE id = ?1"
         )
           .bind(messageId)
           .first();
@@ -381,6 +384,28 @@ export async function handleApiRequest(request, env, ctx) {
         )
           .bind(newContent, now, messageId)
           .run();
+
+        ctx.waitUntil(
+          getConversationParticipants(
+            env.DB,
+            originalMessage.conversation_id
+          ).then((pIds) =>
+            broadcastToUsers(
+              pIds,
+              {
+                type: "message_updated",
+                payload: {
+                  messageId: messageId,
+                  conversationId: originalMessage.conversation_id,
+                  newContent: newContent,
+                  editedAt: now,
+                },
+              },
+              env
+            )
+          )
+        );
+
         return jsonResponse({ success: true, edited_at: now }, 200, {}, env);
       });
     }
@@ -389,11 +414,46 @@ export async function handleApiRequest(request, env, ctx) {
       return await requireAuth(request, env, ctx, async (req) => {
         const messageId = parseInt(pathSegments[1], 10);
         const userId = req.auth.userId;
+        const message = await env.DB.prepare(
+          "SELECT conversation_id, sender_id FROM messages WHERE id = ?1"
+        )
+          .bind(messageId)
+          .first();
+
+        if (!message || message.sender_id !== userId) {
+          return jsonResponse(
+            { error: "Forbidden or Not Found" },
+            403,
+            {},
+            env
+          );
+        }
+
         const { meta } = await env.DB.prepare(
           "DELETE FROM messages WHERE id = ?1 AND sender_id = ?2"
         )
           .bind(messageId, userId)
           .run();
+
+        if (meta.changes > 0) {
+          ctx.waitUntil(
+            getConversationParticipants(env.DB, message.conversation_id).then(
+              (pIds) =>
+                broadcastToUsers(
+                  pIds,
+                  {
+                    type: "message_deleted",
+                    payload: {
+                      messageId: messageId,
+                      conversationId: message.conversation_id,
+                    },
+                  },
+                  env
+                )
+            )
+          );
+        }
+
         return new Response(null, { status: meta.changes > 0 ? 204 : 403 });
       });
     }
@@ -509,8 +569,9 @@ export async function handleApiRequest(request, env, ctx) {
           ctx.waitUntil(
             broadcastToUsers(
               adminIds,
-              { type: "user_created", user: newUser },
-              env
+              { type: "user_created", payload: newUser },
+              env,
+              req.auth.userId
             )
           );
           return jsonResponse(
@@ -544,8 +605,9 @@ export async function handleApiRequest(request, env, ctx) {
           ctx.waitUntil(
             broadcastToUsers(
               adminIds,
-              { type: "user_deleted", userId: userIdToDelete },
-              env
+              { type: "user_deleted", payload: { userId: userIdToDelete } },
+              env,
+              req.auth.userId
             )
           );
           await env.DB.prepare(
