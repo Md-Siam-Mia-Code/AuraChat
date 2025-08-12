@@ -2,11 +2,13 @@
 import { getAssetFromKV } from "@cloudflare/kv-asset-handler";
 import manifestJSON from "__STATIC_CONTENT_MANIFEST";
 import { handleApiRequest } from "./api.js";
-import { handleOptions, getUserIdFromRequest } from "./utils.js";
+import { handleOptions } from "./utils.js";
+import { verifyJwtToken } from "./auth.js";
 
-export { UserSession } from "./user-session.js";
+export { RouterDO } from "./router.js";
 
 const assetManifest = JSON.parse(manifestJSON);
+const ROUTER_DO_ID = "global-aurachat-router";
 
 export default {
   async fetch(request, env, ctx) {
@@ -18,16 +20,18 @@ export default {
       }
 
       if (url.pathname.startsWith("/ws")) {
-        const userId = await getUserIdFromRequest(request, env);
-        if (!userId) {
+        const token = url.searchParams.get("token");
+        const authPayload = await verifyJwtToken(token, env);
+        if (!authPayload) {
           return new Response("Missing or invalid token", { status: 401 });
         }
-        const durableObjectId = env.USER_SESSIONS.idFromName(userId.toString());
-        const durableObjectStub = env.USER_SESSIONS.get(durableObjectId);
+
+        const durableObjectId = env.ROUTER_DO.idFromName(ROUTER_DO_ID);
+        const durableObjectStub = env.ROUTER_DO.get(durableObjectId);
 
         const newUrl = new URL(request.url);
         newUrl.pathname = "/websocket";
-        newUrl.searchParams.set("userId", userId);
+        newUrl.searchParams.set("userId", authPayload.userId);
 
         return durableObjectStub.fetch(new Request(newUrl, request));
       }
