@@ -1,5 +1,4 @@
 // public/js/main.js
-
 import { dom } from "./dom.js";
 import { appState } from "./state.js";
 import { debounce, isTouchDevice, getInitialTheme } from "./utils.js";
@@ -25,11 +24,7 @@ import {
   updateManualLoadButtonVisibility,
 } from "./render.js";
 import * as api from "./api.js";
-import {
-  connectWebSocket,
-  disconnectWebSocket,
-  sendTypingEvent,
-} from "./websocket.js";
+import { disconnectWebSocket, sendTypingEvent } from "./websocket.js";
 import { SWIPE_THRESHOLD } from "./constants.js";
 
 function handleThemeToggle() {
@@ -63,29 +58,42 @@ const debouncedScrollHandler = debounce(() => {
   hideEmojiPanel();
 }, 150);
 
-let hasSentTypingStart = false;
-const debouncedSendTypingStop = debounce(() => {
-  sendTypingEvent("stop");
-  hasSentTypingStart = false; // Reset to allow sending "start" again after a pause
-}, 2500);
+// --- START: CORRECTED TYPING INDICATOR LOGIC ---
+let typingTimer = null;
+const TYPING_TIMER_LENGTH = 3000; // 3 seconds
 
 function handleTypingInput() {
   updateSendButtonState();
   adjustTextareaHeight();
-  if (!hasSentTypingStart) {
+
+  // If there is no timer, it means we are starting a new typing burst.
+  if (typingTimer === null) {
     sendTypingEvent("start");
-    hasSentTypingStart = true;
+  } else {
+    // If a timer already exists, clear it because the user is still typing.
+    clearTimeout(typingTimer);
   }
-  debouncedSendTypingStop();
+
+  // Set a new timer. If the user stops typing, this will fire after 3 seconds.
+  typingTimer = setTimeout(() => {
+    sendTypingEvent("stop");
+    // Reset the timer state, allowing the next keystroke to trigger a "start" event.
+    typingTimer = null;
+  }, TYPING_TIMER_LENGTH);
 }
 
 function handleSendMessageWithTypingReset() {
   if (dom.messageInput.value.trim().length === 0) return;
   api.handleSendMessage();
-  hasSentTypingStart = false;
-  debouncedSendTypingStop.cancel();
+
+  // Immediately stop the typing indicator flow when a message is sent.
+  if (typingTimer) {
+    clearTimeout(typingTimer);
+  }
   sendTypingEvent("stop");
+  typingTimer = null;
 }
+// --- END: CORRECTED TYPING INDICATOR LOGIC ---
 
 function attachEventListeners() {
   dom.onboardingForm?.addEventListener("submit", (e) => {
