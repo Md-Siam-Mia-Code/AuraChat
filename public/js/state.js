@@ -11,6 +11,7 @@ export const appState = {
   hasReachedOldestMessage: new Map(),
   lastMessageSenderIdMap: new Map(),
   lastMessageTimestampMap: new Map(),
+  typingIndicators: new Map(),
   adminStats: {},
   adminUserList: [],
   isLoading: {
