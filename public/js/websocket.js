@@ -1,12 +1,14 @@
+// public/js/websocket.js
 import { appState, setState } from "./state.js";
 import * as api from "./api.js";
 import {
   addMessageToUI,
   renderConversationList,
-  renderAdminUserList,
-  updateChatHeader,
-  updateConversationListSnippet,
+  updateUserOnlineStatus,
+  handleMessageUpdate,
+  handleMessageDelete,
 } from "./render.js";
+import { renderTypingIndicator } from "./ui.js";
 
 let ws;
 let pingInterval;
@@ -21,10 +23,33 @@ function handleUserListUpdate() {
 }
 
 function handleIncomingMessage(message) {
-  if (message.conversation_id === appState.currentConversationId) {
+  const conversationId = Number(message.conversation_id);
+  renderTypingIndicator(false, conversationId);
+
+  const newMessagesMap = new Map(appState.messages);
+  const currentMessages = newMessagesMap.get(conversationId) || [];
+  newMessagesMap.set(conversationId, [...currentMessages, message]);
+  setState({ messages: newMessagesMap });
+
+  if (conversationId === Number(appState.currentConversationId)) {
     addMessageToUI(message);
   }
-  updateConversationListSnippet(message.conversation_id, message);
+
+  import("./render.js").then((m) =>
+    m.updateConversationListSnippet(conversationId, message)
+  );
+}
+
+export function sendTypingEvent(type) {
+  if (ws?.readyState !== WebSocket.OPEN || !appState.currentConversationId)
+    return;
+  const event = {
+    type: type === "start" ? "typing_start" : "typing_stop",
+    payload: {
+      conversationId: Number(appState.currentConversationId),
+    },
+  };
+  ws.send(JSON.stringify(event));
 }
 
 export function connectWebSocket() {
@@ -62,7 +87,22 @@ export function connectWebSocket() {
           handleUserListUpdate();
           break;
         case "new_message":
-          handleIncomingMessage(data.message);
+          handleIncomingMessage(data.payload);
+          break;
+        case "typing_indicator":
+          renderTypingIndicator(
+            data.payload.status === "start",
+            Number(data.payload.conversationId)
+          );
+          break;
+        case "user_status_update":
+          updateUserOnlineStatus(data.payload);
+          break;
+        case "message_updated":
+          handleMessageUpdate(data.payload);
+          break;
+        case "message_deleted":
+          handleMessageDelete(data.payload);
           break;
       }
     } catch (e) {
