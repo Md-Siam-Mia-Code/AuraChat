@@ -1,15 +1,20 @@
+// public/js/render.js
 import { dom } from "./dom.js";
-import { appState } from "./state.js";
-import { escapeHtml, formatDate, formatLastSeen } from "./utils.js";
+import { appState, setState } from "./state.js";
+import {
+  escapeHtml,
+  formatDate,
+  formatLastSeen,
+  formatTimeGap,
+} from "./utils.js";
 import {
   ONLINE_THRESHOLD_MINUTES,
   EMOJI_REGEX_CHECK,
   TIME_GAP_THRESHOLD_MINUTES,
   MANUAL_BUTTON_SCROLL_THRESHOLD,
-  MESSAGES_INITIAL_LOAD_LIMIT,
-  MESSAGES_LOAD_OLDER_LIMIT,
 } from "./constants.js";
 import { showElement, hideElement, scrollToBottom } from "./ui.js";
+import * as api from "./api.js";
 
 function createMessageHTML(msg) {
   const isMyMessage = msg.sender_id === appState.currentUser.id;
@@ -25,11 +30,14 @@ function createMessageHTML(msg) {
 
   return `
     <div class="message ${isMyMessage ? "sent" : "received"} ${isEmojiOnly ? "message-emoji-only" : ""}" ${idAttr} data-message-id="${msg.id}">
-        ${replyHTML}
-        <div class="message-content">${escapeHtml(msg.content)}</div>
-        <div class="message-meta">
-            <span class="message-timestamp">${formatDate(msg.timestamp)}</span>
-            ${msg.is_edited ? '<span class="edited-indicator">(edited)</span>' : ""}
+        <div class="message-swipe-indicator"><i class="fa-solid fa-reply"></i></div>
+        <div class="message-content-wrapper">
+            ${replyHTML}
+            <div class="message-content">${escapeHtml(msg.content)}</div>
+            <div class="message-meta">
+                <span class="message-timestamp">${formatDate(msg.timestamp)}</span>
+                ${msg.is_edited ? '<span class="edited-indicator">(edited)</span>' : ""}
+            </div>
         </div>
         <div class="message-actions">
             <button class="message-action-button" data-action="reply-message" title="Reply"><i class="fa-solid fa-reply"></i></button>
@@ -37,6 +45,115 @@ function createMessageHTML(msg) {
             ${isMyMessage ? `<button class="message-action-button" data-action="delete-message" title="Delete"><i class="fa-solid fa-trash-can"></i></button>` : ""}
         </div>
     </div>`;
+}
+
+export function renderMessageEditUI(messageElement) {
+  const contentDiv = messageElement.querySelector(".message-content");
+  if (!contentDiv) return;
+
+  const originalContent = contentDiv.textContent;
+  contentDiv.style.display = "none";
+
+  const form = document.createElement("form");
+  form.className = "message-edit-form";
+  form.innerHTML = `
+        <textarea name="newContent" required>${originalContent}</textarea>
+        <div class="message-edit-actions">
+            <p>Press Esc to <button type="button" class="link-button" data-action="cancel-edit">cancel</button> &bull; Enter to <button type="submit" class="link-button">save</button></p>
+        </div>
+    `;
+
+  const wrapper = messageElement.querySelector(".message-content-wrapper");
+  wrapper.appendChild(form);
+  const textarea = form.querySelector("textarea");
+  textarea.focus();
+  textarea.select();
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const newContent = textarea.value.trim();
+    if (newContent && newContent !== originalContent) {
+      const messageId = messageElement.dataset.messageId;
+      api.handleEditMessage(messageId, newContent, () => {
+        removeMessageEditUI(messageElement);
+      });
+    } else {
+      removeMessageEditUI(messageElement);
+    }
+  });
+}
+
+export function removeMessageEditUI(messageElement) {
+  if (!messageElement) return;
+  const form = messageElement.querySelector(".message-edit-form");
+  if (form) form.remove();
+  const contentDiv = messageElement.querySelector(".message-content");
+  if (contentDiv) contentDiv.style.display = "block";
+  setState({ editingMessageId: null });
+}
+
+export function handleMessageUpdate({
+  messageId,
+  conversationId,
+  newContent,
+  editedAt,
+}) {
+  const numConversationId = Number(conversationId);
+  const newMessagesMap = new Map(appState.messages);
+  const messages = newMessagesMap.get(numConversationId) || [];
+  const newMessages = messages.map((msg) => {
+    if (String(msg.id) === String(messageId)) {
+      return {
+        ...msg,
+        content: newContent,
+        is_edited: true,
+        edited_at: editedAt,
+      };
+    }
+    return msg;
+  });
+  newMessagesMap.set(numConversationId, newMessages);
+  setState({ messages: newMessagesMap });
+
+  if (numConversationId === Number(appState.currentConversationId)) {
+    const messageElement = document.querySelector(
+      `[data-message-id="${messageId}"]`
+    );
+    if (messageElement) {
+      if (String(appState.editingMessageId) === String(messageId)) {
+        removeMessageEditUI(messageElement);
+      }
+      messageElement.querySelector(".message-content").textContent = newContent;
+      let indicator = messageElement.querySelector(".edited-indicator");
+      if (!indicator) {
+        indicator = document.createElement("span");
+        indicator.className = "edited-indicator";
+        indicator.textContent = "(edited)";
+        messageElement.querySelector(".message-meta").appendChild(indicator);
+      }
+    }
+  }
+}
+
+export function handleMessageDelete({ messageId, conversationId }) {
+  const numConversationId = Number(conversationId);
+  const newMessagesMap = new Map(appState.messages);
+  const messages = newMessagesMap.get(numConversationId) || [];
+  newMessagesMap.set(
+    numConversationId,
+    messages.filter((m) => String(m.id) !== String(messageId))
+  );
+  setState({ messages: newMessagesMap });
+
+  if (numConversationId === Number(appState.currentConversationId)) {
+    const messageElement = document.querySelector(
+      `[data-message-id="${messageId}"]`
+    );
+    if (messageElement) {
+      messageElement.style.opacity = "0";
+      setTimeout(() => messageElement.remove(), 300);
+    }
+  }
 }
 
 export function renderConversationList() {
@@ -113,11 +230,15 @@ export function renderConversationList() {
     .join("");
 }
 
-export function renderMessages(conversationId) {
+export function renderMessages(conversationId, options = {}) {
   const wrapper = dom.messageArea.querySelector(".messages-list-wrapper");
   if (!wrapper) return;
 
-  const messages = appState.messages.get(conversationId) || [];
+  const oldScrollHeight = dom.messageArea.scrollHeight;
+
+  // FIX: Convert ID to a number to correctly fetch from the state map.
+  const numId = Number(conversationId);
+  const messages = appState.messages.get(numId) || [];
 
   if (appState.isLoading.messages && messages.length === 0) {
     wrapper.innerHTML = `<div class="list-placeholder"><i class="fa-solid fa-spinner fa-spin"></i> Loading messages...</div>`;
@@ -138,14 +259,19 @@ export function renderMessages(conversationId) {
       currentTimestamp.getTime() - lastTimestamp.getTime() >
         TIME_GAP_THRESHOLD_MINUTES * 60 * 1000
     ) {
-      messagesHtml += `<div class="message-time-gap-marker">${currentTimestamp.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}</div>`;
+      messagesHtml += `<div class="message-time-gap-marker">${formatTimeGap(msg.timestamp)}</div>`;
     }
     messagesHtml += createMessageHTML(msg);
     lastTimestamp = currentTimestamp;
   });
 
   wrapper.innerHTML = messagesHtml;
-  scrollToBottom(dom.messageArea, true);
+
+  if (options.keepScrollPosition) {
+    dom.messageArea.scrollTop = dom.messageArea.scrollHeight - oldScrollHeight;
+  } else {
+    scrollToBottom(dom.messageArea, true);
+  }
 }
 
 export function addMessageToUI(message) {
@@ -155,7 +281,15 @@ export function addMessageToUI(message) {
   const placeholder = wrapper.querySelector(".list-placeholder");
   if (placeholder) placeholder.remove();
 
-  wrapper.insertAdjacentHTML("beforeend", createMessageHTML(message));
+  const typingIndicator = wrapper.querySelector(".typing-indicator-bubble");
+
+  const messageHTML = createMessageHTML(message);
+  if (typingIndicator) {
+    typingIndicator.insertAdjacentHTML("beforebegin", messageHTML);
+  } else {
+    wrapper.insertAdjacentHTML("beforeend", messageHTML);
+  }
+
   scrollToBottom(dom.messageArea);
 }
 
@@ -171,7 +305,9 @@ export function updateOptimisticMessage(tempId, confirmedMessage) {
 }
 
 export function updateConversationListSnippet(conversationId, latestMessage) {
-  const convo = appState.conversations.find((c) => c.id == conversationId);
+  // FIX: Ensure numeric comparison for consistency
+  const numId = Number(conversationId);
+  const convo = appState.conversations.find((c) => c.id === numId);
   if (convo) {
     convo.last_message_content = latestMessage.content;
     convo.last_message_sender = latestMessage.sender_username;
@@ -190,16 +326,41 @@ export function updateChatHeader(conversation) {
     new Date() - new Date(conversation.partner_last_active_ts) <
       ONLINE_THRESHOLD_MINUTES * 60 * 1000;
   dom.chatPartnerAvatar.classList.toggle("online", isOnline);
-
-  // This is the corrected line
   dom.chatPartnerStatus.textContent = formatLastSeen(
     conversation.partner_last_active_ts,
     isOnline
   );
-
   dom.blockUserButton.dataset.userId = conversation.partner_id;
   showElement(dom.refreshMessagesButton);
   showElement(dom.blockUserButton);
+}
+
+export function updateUserOnlineStatus({ userId, status, last_active_ts }) {
+  if (!appState.currentUser || userId === appState.currentUser.id) return;
+
+  const newUsers = appState.users.map((u) =>
+    u.id === userId ? { ...u, last_active_ts } : u
+  );
+
+  const newConversations = appState.conversations.map((c) =>
+    c.partner_id === userId
+      ? { ...c, partner_last_active_ts: last_active_ts }
+      : c
+  );
+
+  setState({
+    users: newUsers,
+    conversations: newConversations,
+  });
+
+  const updatedConvoForHeader = newConversations.find(
+    (c) => c.id === Number(appState.currentConversationId)
+  );
+  if (updatedConvoForHeader) {
+    updateChatHeader(updatedConvoForHeader);
+  }
+
+  renderConversationList();
 }
 
 export function renderAdminStats() {
@@ -279,7 +440,9 @@ export function updateManualLoadButtonVisibility() {
   if (!appState.currentConversationId) return;
   const show =
     !appState.isLoading.olderMessages &&
-    !appState.hasReachedOldestMessage.get(appState.currentConversationId) &&
+    !appState.hasReachedOldestMessage.get(
+      Number(appState.currentConversationId)
+    ) &&
     dom.messageArea.scrollTop < MANUAL_BUTTON_SCROLL_THRESHOLD;
   dom.manualLoadOlderButton.style.display = show ? "flex" : "none";
 }
