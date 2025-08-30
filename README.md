@@ -86,7 +86,7 @@ Ready to get your own Aura Chat instance running? Follow this magical quest!
     Open your terminal and clone the repository.
 
     ```bash
-    git clone https://github.com/Md-Siam-Mia-Code/AuraChat.git
+    git clone https://github.com/Md-Siam-Mia-Man/AuraChat.git
     cd AuraChat
     ```
 
